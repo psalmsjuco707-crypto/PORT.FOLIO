@@ -177,7 +177,7 @@ function switchViewerTab(key, tabEl) {
   document.getElementById('viewerCodeDisplay').textContent = (proj.type === 'cpp') ? (proj.code || '') : (proj[key] || '');
 }
 
-// ===== FIXED: SMART WEB PREVIEW (Allows full interactivity) =====
+// ===== FIXED: MULTI-PAGE SIMULATOR FOR WEB PROJECTS =====
 function renderWebPreview(proj) {
   const preview = document.getElementById('viewerPreview');
   preview.innerHTML = '';
@@ -190,48 +190,105 @@ function renderWebPreview(proj) {
   iframe.style.backgroundColor = '#ffffff';
   iframe.style.pointerEvents = 'auto';
   
-  // ✅ SMART SANDBOX: Allows scripts, forms, modals, and same-origin access
-  // but prevents navigation to parent frames
-  iframe.sandbox = 'allow-scripts allow-modals allow-forms allow-same-origin allow-popups allow-top-navigation-by-user-activation';
+  // Maximum permissions for full functionality
+  iframe.sandbox = 'allow-scripts allow-modals allow-forms allow-same-origin allow-popups allow-top-navigation-by-user-activation allow-pointer-lock';
   
-  // 🔒 SMART NAVIGATION GUARD: Only blocks actual page escapes, allows internal JS navigation
-  const navigationGuard = `
+  // Multi-page simulator that intercepts navigation and simulates page changes
+  const multiPageSimulator = `
     <script>
       (function() {
-        // Only intercept links that would actually navigate away
+        // Store all "pages" as hidden divs
+        const pages = {};
+        let currentPage = 'index';
+        
+        // Function to show a specific page
+        function showPage(pageName) {
+          // Hide all pages
+          document.querySelectorAll('.simulated-page').forEach(p => {
+            p.style.display = 'none';
+          });
+          
+          // Show requested page
+          const targetPage = document.getElementById('page-' + pageName);
+          if (targetPage) {
+            targetPage.style.display = 'block';
+            currentPage = pageName;
+            console.log('Navigated to:', pageName);
+          } else {
+            // If page doesn't exist, show current page
+            console.log('Page not found:', pageName, '- staying on current page');
+          }
+        }
+        
+        // Intercept ALL link clicks
         document.addEventListener('click', function(e) {
           const link = e.target.closest('a');
           if (link) {
+            e.preventDefault();
+            e.stopPropagation();
+            
             const href = link.getAttribute('href') || '';
-            // Only block links that explicitly try to escape the iframe
-            if (href === 'index.html' || href === '../index.html' || 
-                href === '/' || href === '../' || href === '../../') {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('Blocked navigation attempt:', href);
+            
+            // Extract page name from href (e.g., "dashboard.html" -> "dashboard")
+            let pageName = href.replace('.html', '').replace('./', '').replace('../', '').replace('/', '');
+            
+            // If it's just "#" or empty, stay on current page
+            if (href === '#' || href === '' || href === './') {
+              console.log('Anchor link clicked, staying on current page');
               return false;
             }
-            // Allow all other links (including # for JS-driven navigation)
-            link.setAttribute('target', '_self');
+            
+            // Try to navigate to the page
+            showPage(pageName);
+            return false;
           }
         }, true);
         
-        // Allow forms to submit within the iframe
+        // Intercept form submissions
         document.addEventListener('submit', function(e) {
-          if (!e.target.getAttribute('target')) {
-            e.target.setAttribute('target', '_self');
-          }
+          e.preventDefault();
+          console.log('Form submitted, preventing default behavior');
+          // You can add custom form handling here
+          alert('Form submitted! (In a real app, this would process the data)');
+          return false;
         }, true);
         
-        // Prevent window.open from escaping
+        // Override window.location to prevent navigation
+        const originalLocation = window.location;
+        Object.defineProperty(window, 'location', {
+          get: function() { return originalLocation; },
+          set: function(value) { 
+            console.log('Blocked navigation to:', value);
+            return false;
+          }
+        });
+        
+        // Override window.open
         const originalOpen = window.open;
         window.open = function(url, name, features) {
-          if (url && (url.includes('index.html') || url === '/' || url === '../')) {
-            console.log('Blocked window.open attempt:', url);
-            return null;
-          }
-          return originalOpen.call(window, url, name, features);
+          console.log('Blocked window.open to:', url);
+          return null;
         };
+        
+        // Initialize: wrap all content in a "page" div
+        document.addEventListener('DOMContentLoaded', function() {
+          const body = document.body;
+          const content = body.innerHTML;
+          body.innerHTML = '<div id="page-index" class="simulated-page" style="display:block;">' + content + '</div>';
+          
+          // Create placeholder pages for common navigation
+          const commonPages = ['dashboard', 'members', 'add-members', 'settings', 'profile', 'reports'];
+          commonPages.forEach(page => {
+            if (!document.getElementById('page-' + page)) {
+              const pageDiv = document.createElement('div');
+              pageDiv.id = 'page-' + page;
+              pageDiv.className = 'simulated-page';
+              pageDiv.style.display = 'none';
+              pageDiv.innerHTML = '<div style="padding:40px; text-align:center; background:#f5f5f5; border-radius:8px; margin:20px;"><h2>' + page.charAt(0).toUpperCase() + page.slice(1).replace('-', ' ') + ' Page</h2><p style="color:#666; margin-top:10px;">This is a simulated page. In your actual Gym System, this would show the ' + page + ' content.</p><p style="color:#999; font-size:14px; margin-top:20px;">To make this fully functional, you need to add the HTML content for this page in your project settings.</p></div>';
+              body.appendChild(pageDiv);
+            }
+          });
+        });
       })();
     <\/script>
   `;
@@ -241,15 +298,23 @@ function renderWebPreview(proj) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <base target="_self">
   <style>
-    body { margin: 0; padding: 0; background: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { 
+      margin: 0; 
+      padding: 0; 
+      background: #ffffff; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+    }
+    .simulated-page {
+      width: 100%;
+      min-height: 100vh;
+    }
     ${proj.css || ''}
   </style>
 </head>
 <body>
   ${proj.html || ''}
-  ${navigationGuard}
+  ${multiPageSimulator}
   <script>
     try { 
       ${proj.js || ''} 
@@ -278,32 +343,70 @@ document.addEventListener('fullscreenchange', () => {
   if (btn) btn.innerHTML = document.fullscreenElement ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
 });
 
-// ===== FIXED: SMART NEW TAB OPENING =====
+// ===== FIXED: NEW TAB WITH MULTI-PAGE SIMULATOR =====
 function openInNewTab() {
   const proj = currentViewerProject;
   if (!proj || proj.type !== 'web') return;
   
-  const navigationGuard = `
+  const multiPageSimulator = `
     <script>
       (function() {
+        const pages = {};
+        let currentPage = 'index';
+        
+        function showPage(pageName) {
+          document.querySelectorAll('.simulated-page').forEach(p => {
+            p.style.display = 'none';
+          });
+          
+          const targetPage = document.getElementById('page-' + pageName);
+          if (targetPage) {
+            targetPage.style.display = 'block';
+            currentPage = pageName;
+          }
+        }
+        
         document.addEventListener('click', function(e) {
           const link = e.target.closest('a');
           if (link) {
+            e.preventDefault();
+            e.stopPropagation();
+            
             const href = link.getAttribute('href') || '';
-            if (href === 'index.html' || href === '../index.html' || 
-                href === '/' || href === '../' || href === '../../') {
-              e.preventDefault();
-              e.stopPropagation();
+            let pageName = href.replace('.html', '').replace('./', '').replace('../', '').replace('/', '');
+            
+            if (href === '#' || href === '' || href === './') {
               return false;
             }
-            link.setAttribute('target', '_self');
+            
+            showPage(pageName);
+            return false;
           }
         }, true);
+        
         document.addEventListener('submit', function(e) {
-          if (!e.target.getAttribute('target')) {
-            e.target.setAttribute('target', '_self');
-          }
+          e.preventDefault();
+          alert('Form submitted!');
+          return false;
         }, true);
+        
+        document.addEventListener('DOMContentLoaded', function() {
+          const body = document.body;
+          const content = body.innerHTML;
+          body.innerHTML = '<div id="page-index" class="simulated-page" style="display:block;">' + content + '</div>';
+          
+          const commonPages = ['dashboard', 'members', 'add-members', 'settings', 'profile', 'reports'];
+          commonPages.forEach(page => {
+            if (!document.getElementById('page-' + page)) {
+              const pageDiv = document.createElement('div');
+              pageDiv.id = 'page-' + page;
+              pageDiv.className = 'simulated-page';
+              pageDiv.style.display = 'none';
+              pageDiv.innerHTML = '<div style="padding:40px; text-align:center; background:#f5f5f5; border-radius:8px; margin:20px;"><h2>' + page.charAt(0).toUpperCase() + page.slice(1).replace('-', ' ') + ' Page</h2><p style="color:#666; margin-top:10px;">This is a simulated page.</p></div>';
+              body.appendChild(pageDiv);
+            }
+          });
+        });
       })();
     <\/script>
   `;
@@ -313,15 +416,23 @@ function openInNewTab() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <base target="_self">
   <style>
-    body { margin: 0; padding: 0; background: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { 
+      margin: 0; 
+      padding: 0; 
+      background: #ffffff; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+    }
+    .simulated-page {
+      width: 100%;
+      min-height: 100vh;
+    }
     ${proj.css || ''}
   </style>
 </head>
 <body>
   ${proj.html || ''}
-  ${navigationGuard}
+  ${multiPageSimulator}
   <script>
     try { ${proj.js || ''} } catch(e) { console.error(e); }
   <\/script>
@@ -805,7 +916,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape') { closeViewer(); closeModal('projectModal'); }
   });
 
-  // ===== CURSOR GLOW & CUSTOM SWORD CURSOR LOGIC =====
   const cursorGlow = document.getElementById('cursorGlow');
   const customCursor = document.getElementById('customCursor');
   
@@ -829,7 +939,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ===== FIXED: ROBUST CONTACT FORM WITH AD-BLOCKER FALLBACK =====
   const cf = document.querySelector('.contact-form');
   if (cf) {
     cf.addEventListener('submit', async function(e) {
@@ -867,10 +976,9 @@ document.addEventListener('DOMContentLoaded', () => {
         st.textContent = '❌ Network Error. This is usually caused by an Ad-Blocker (like uBlock or Brave Shields) blocking FormSubmit. Please disable it temporarily or check your email to activate the form first.'; 
         console.error('FormSubmit fetch error:', err);
         
-        // Fallback: try native form submission if fetch is completely blocked by browser
         setTimeout(() => {
           if(confirm("Fetch failed (likely due to an Ad-Blocker). Try submitting the form normally? This will redirect you to a confirmation page.")) {
-            cf.submit(); // Native submission bypasses fetch CORS/ad-blocker issues
+            cf.submit();
           }
         }, 1000);
       }
