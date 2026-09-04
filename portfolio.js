@@ -177,7 +177,7 @@ function switchViewerTab(key, tabEl) {
   document.getElementById('viewerCodeDisplay').textContent = (proj.type === 'cpp') ? (proj.code || '') : (proj[key] || '');
 }
 
-// ===== FIXED: SAFE WEB PREVIEW (No more quote-escaping bugs) =====
+// ===== FIXED: ROBUST WEB PREVIEW (Prevents portfolio bleed-through) =====
 function renderWebPreview(proj) {
   const preview = document.getElementById('viewerPreview');
   preview.innerHTML = ''; // Clear previous content safely
@@ -185,13 +185,23 @@ function renderWebPreview(proj) {
   const iframe = document.createElement('iframe');
   iframe.style.width = '100%';
   iframe.style.height = '100%';
+  iframe.style.minHeight = '400px';
   iframe.style.border = 'none';
+  iframe.style.backgroundColor = '#ffffff'; // Prevents transparency showing the portfolio behind it
+  iframe.style.pointerEvents = 'auto'; // Ensures iframe captures all clicks
+  
+  // CRITICAL: Grants the iframe permission to run JS, forms, and access its own context without crashing
+  iframe.sandbox = 'allow-scripts allow-modals allow-forms allow-same-origin allow-popups';
   
   const source = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <style>${proj.css || ''}</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin: 0; padding: 0; background: #ffffff; }
+    ${proj.css || ''}
+  </style>
 </head>
 <body>
   ${proj.html || ''}
@@ -199,8 +209,9 @@ function renderWebPreview(proj) {
     try { 
       ${proj.js || ''} 
     } catch(e) { 
-      console.error(e); 
-      document.body.innerHTML += '<div style="color:red; padding:10px; background:#ffebee; border-radius:4px; margin:10px;">JS Error: ' + e.message + '</div>';
+      console.error('Project JS Error:', e); 
+      // If the gym system JS crashes, show a visible error INSIDE the iframe instead of failing silently
+      document.body.innerHTML += '<div style="color:red; padding:20px; background:#ffebee; border:1px solid red; border-radius:4px; margin:20px; font-family:sans-serif;"><strong>JS Error in Project:</strong><br>' + e.message + '</div>';
     }
   <\/script>
 </body>
@@ -231,7 +242,11 @@ function openInNewTab() {
 <html>
 <head>
   <meta charset="UTF-8">
-  <style>${proj.css || ''}</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin: 0; padding: 0; background: #ffffff; }
+    ${proj.css || ''}
+  </style>
 </head>
 <body>
   ${proj.html || ''}
@@ -739,7 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ===== FIXED: CONTACT FORM WITH PROPER FORMSUBMIT ERROR HANDLING =====
+  // ===== FIXED: ROBUST CONTACT FORM WITH AD-BLOCKER FALLBACK =====
   const cf = document.querySelector('.contact-form');
   if (cf) {
     cf.addEventListener('submit', async function(e) {
@@ -754,26 +769,35 @@ document.addEventListener('DOMContentLoaded', () => {
       st.textContent = 'Sending...';
       
       try {
+        const formData = new FormData(cf);
         const r = await fetch(cf.action, { 
           method: 'POST', 
-          body: new FormData(cf), 
-          headers: { 'Accept': 'application/json' } 
+          body: formData, 
+          headers: { 'Accept': 'application/json' },
+          mode: 'cors'
         });
         
         const data = await r.json();
         
         if (r.ok && data.success) { 
           st.style.color = '#4ade80'; 
-          st.textContent = '✅ Sent! (Check your email to activate if this is your first time)'; 
+          st.textContent = '✅ Message Sent Successfully!'; 
           cf.reset(); 
         } else { 
           st.style.color = '#ef4444'; 
-          st.textContent = '❌ Error: ' + (data.message || 'Please check your email inbox/spam to activate the form.'); 
+          st.textContent = '❌ Error: ' + (data.message || 'Form not activated. Check your email spam folder for an activation link from FormSubmit.'); 
         }
       } catch (err) { 
         st.style.color = '#ef4444'; 
-        st.textContent = '❌ Network error. Please try again.'; 
-        console.error('FormSubmit error:', err);
+        st.textContent = '❌ Network Error. This is usually caused by an Ad-Blocker (like uBlock or Brave Shields) blocking FormSubmit. Please disable it temporarily or check your email to activate the form first.'; 
+        console.error('FormSubmit fetch error:', err);
+        
+        // Fallback: try native form submission if fetch is completely blocked by browser
+        setTimeout(() => {
+          if(confirm("Fetch failed (likely due to an Ad-Blocker). Try submitting the form normally? This will redirect you to a confirmation page.")) {
+            cf.submit(); // Native submission bypasses fetch CORS/ad-blocker issues
+          }
+        }, 1000);
       }
       
       sb.disabled = false; 
