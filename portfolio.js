@@ -177,10 +177,37 @@ function switchViewerTab(key, tabEl) {
   document.getElementById('viewerCodeDisplay').textContent = (proj.type === 'cpp') ? (proj.code || '') : (proj[key] || '');
 }
 
+// ===== FIXED: SAFE WEB PREVIEW (No more quote-escaping bugs) =====
 function renderWebPreview(proj) {
   const preview = document.getElementById('viewerPreview');
-  const source = `<!DOCTYPE html><html><head><style>${proj.css || ''}</style></head><body>${proj.html || ''}<script>try { ${proj.js || ''} } catch(e) { console.error(e); }<\/script></body></html>`;
-  preview.innerHTML = `<iframe srcdoc="${source.replace(/"/g, '&quot;')}"></iframe>`;
+  preview.innerHTML = ''; // Clear previous content safely
+
+  const iframe = document.createElement('iframe');
+  iframe.style.width = '100%';
+  iframe.style.height = '100%';
+  iframe.style.border = 'none';
+  
+  const source = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>${proj.css || ''}</style>
+</head>
+<body>
+  ${proj.html || ''}
+  <script>
+    try { 
+      ${proj.js || ''} 
+    } catch(e) { 
+      console.error(e); 
+      document.body.innerHTML += '<div style="color:red; padding:10px; background:#ffebee; border-radius:4px; margin:10px;">JS Error: ' + e.message + '</div>';
+    }
+  <\/script>
+</body>
+</html>`;
+  
+  iframe.srcdoc = source;
+  preview.appendChild(iframe);
 }
 
 function toggleViewerFullscreen() {
@@ -196,11 +223,26 @@ document.addEventListener('fullscreenchange', () => {
   if (btn) btn.innerHTML = document.fullscreenElement ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
 });
 
+// ===== FIXED: SAFE NEW TAB OPENING =====
 function openInNewTab() {
   const proj = currentViewerProject;
   if (!proj || proj.type !== 'web') return;
-  const source = `<!DOCTYPE html><html><head><style>${proj.css || ''}</style></head><body>${proj.html || ''}<script>try { ${proj.js || ''} } catch(e) {}<\/script></body></html>`;
-  window.open(URL.createObjectURL(new Blob([source], { type: 'text/html' })), '_blank');
+  const source = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>${proj.css || ''}</style>
+</head>
+<body>
+  ${proj.html || ''}
+  <script>
+    try { ${proj.js || ''} } catch(e) { console.error(e); }
+  <\/script>
+</body>
+</html>`;
+  const blob = new Blob([source], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
 }
 
 function closeViewer() {
@@ -673,7 +715,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape') { closeViewer(); closeModal('projectModal'); }
   });
 
-  // ===== CURSOR GLOW & CUSTOM SWORD CURSOR LOGIC (FIXED) =====
+  // ===== CURSOR GLOW & CUSTOM SWORD CURSOR LOGIC =====
   const cursorGlow = document.getElementById('cursorGlow');
   const customCursor = document.getElementById('customCursor');
   
@@ -687,7 +729,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // FIXED: Properly detect hover over clickable elements to add hovering class
   const clickables = document.querySelectorAll('a, button, .project-card, .feedback-card, input, textarea, select, .btn, .tab-btn, .social-icon, .add-btn, .reaction-btn, .viewer-action-btn, .inline-comment-submit, .close-modal, .file-label, .whatido-card');
   clickables.forEach(el => {
     el.addEventListener('mouseenter', () => {
@@ -698,21 +739,46 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // ===== FIXED: CONTACT FORM WITH PROPER FORMSUBMIT ERROR HANDLING =====
   const cf = document.querySelector('.contact-form');
   if (cf) {
     cf.addEventListener('submit', async function(e) {
       e.preventDefault();
       const st = document.getElementById('formStatus');
       const sb = cf.querySelector('button[type="submit"]');
-      sb.disabled = true; sb.innerHTML = '⏳ Sending...';
-      st.style.display = 'block'; st.style.color = '#fbbf24'; st.textContent = 'Sending...';
+      
+      sb.disabled = true; 
+      sb.innerHTML = '⏳ Sending...';
+      st.style.display = 'block'; 
+      st.style.color = '#fbbf24'; 
+      st.textContent = 'Sending...';
+      
       try {
-        const r = await fetch(cf.action, { method: 'POST', body: new FormData(cf), headers: { 'Accept': 'application/json' } });
-        if (r.ok) { st.style.color = '#4ade80'; st.textContent = '✅ Sent!'; cf.reset(); }
-        else { st.style.color = '#ef4444'; st.textContent = '❌ Error.'; }
-      } catch { st.style.color = '#ef4444'; st.textContent = '❌ Network error.'; }
-      sb.disabled = false; sb.innerHTML = 'Send Message <span class="btn-arrow">→</span>';
-      setTimeout(() => { st.style.display = 'none'; }, 5000);
+        const r = await fetch(cf.action, { 
+          method: 'POST', 
+          body: new FormData(cf), 
+          headers: { 'Accept': 'application/json' } 
+        });
+        
+        const data = await r.json();
+        
+        if (r.ok && data.success) { 
+          st.style.color = '#4ade80'; 
+          st.textContent = '✅ Sent! (Check your email to activate if this is your first time)'; 
+          cf.reset(); 
+        } else { 
+          st.style.color = '#ef4444'; 
+          st.textContent = '❌ Error: ' + (data.message || 'Please check your email inbox/spam to activate the form.'); 
+        }
+      } catch (err) { 
+        st.style.color = '#ef4444'; 
+        st.textContent = '❌ Network error. Please try again.'; 
+        console.error('FormSubmit error:', err);
+      }
+      
+      sb.disabled = false; 
+      sb.innerHTML = 'Send Message <span class="btn-arrow">→</span>';
+      setTimeout(() => { st.style.display = 'none'; }, 8000);
     });
   }
 });
