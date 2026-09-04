@@ -177,27 +177,64 @@ function switchViewerTab(key, tabEl) {
   document.getElementById('viewerCodeDisplay').textContent = (proj.type === 'cpp') ? (proj.code || '') : (proj[key] || '');
 }
 
-// ===== FIXED: ROBUST WEB PREVIEW (Prevents portfolio bleed-through) =====
+// ===== FIXED: WEB PREVIEW WITH NAVIGATION GUARD =====
 function renderWebPreview(proj) {
   const preview = document.getElementById('viewerPreview');
-  preview.innerHTML = ''; // Clear previous content safely
+  preview.innerHTML = '';
 
   const iframe = document.createElement('iframe');
   iframe.style.width = '100%';
   iframe.style.height = '100%';
   iframe.style.minHeight = '400px';
   iframe.style.border = 'none';
-  iframe.style.backgroundColor = '#ffffff'; // Prevents transparency showing the portfolio behind it
-  iframe.style.pointerEvents = 'auto'; // Ensures iframe captures all clicks
-  
-  // CRITICAL: Grants the iframe permission to run JS, forms, and access its own context without crashing
+  iframe.style.backgroundColor = '#ffffff';
+  iframe.style.pointerEvents = 'auto';
   iframe.sandbox = 'allow-scripts allow-modals allow-forms allow-same-origin allow-popups';
+  
+  // 🔒 NAVIGATION GUARD: Prevents gym system links from escaping to the portfolio
+  const navigationGuard = `
+    <script>
+      (function() {
+        // Intercept ALL link clicks and keep them inside the iframe
+        document.addEventListener('click', function(e) {
+          const link = e.target.closest('a');
+          if (link) {
+            const href = link.getAttribute('href') || '';
+            // Block any link that would escape or reload the parent portfolio
+            if (href === '' || href === '#' || href === './' || 
+                href === 'index.html' || href === '../index.html' || 
+                href === '/' || href.startsWith('#')) {
+              e.preventDefault();
+              e.stopPropagation();
+              return false;
+            }
+            // Force the link to stay inside the iframe
+            link.setAttribute('target', '_self');
+          }
+        }, true);
+        
+        // Intercept form submissions so they don't escape
+        document.addEventListener('submit', function(e) {
+          if (!e.target.getAttribute('target')) {
+            e.target.setAttribute('target', '_self');
+          }
+        }, true);
+        
+        // Trick the gym system into thinking it's the top window
+        try {
+          Object.defineProperty(window, 'top', { get: function() { return window; }, configurable: true });
+          Object.defineProperty(window, 'parent', { get: function() { return window; }, configurable: true });
+        } catch(err) {}
+      })();
+    <\/script>
+  `;
   
   const source = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base target="_self">
   <style>
     body { margin: 0; padding: 0; background: #ffffff; }
     ${proj.css || ''}
@@ -205,12 +242,12 @@ function renderWebPreview(proj) {
 </head>
 <body>
   ${proj.html || ''}
+  ${navigationGuard}
   <script>
     try { 
       ${proj.js || ''} 
     } catch(e) { 
       console.error('Project JS Error:', e); 
-      // If the gym system JS crashes, show a visible error INSIDE the iframe instead of failing silently
       document.body.innerHTML += '<div style="color:red; padding:20px; background:#ffebee; border:1px solid red; border-radius:4px; margin:20px; font-family:sans-serif;"><strong>JS Error in Project:</strong><br>' + e.message + '</div>';
     }
   <\/script>
@@ -234,15 +271,43 @@ document.addEventListener('fullscreenchange', () => {
   if (btn) btn.innerHTML = document.fullscreenElement ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
 });
 
-// ===== FIXED: SAFE NEW TAB OPENING =====
+// ===== FIXED: SAFE NEW TAB OPENING WITH NAVIGATION GUARD =====
 function openInNewTab() {
   const proj = currentViewerProject;
   if (!proj || proj.type !== 'web') return;
+  
+  const navigationGuard = `
+    <script>
+      (function() {
+        document.addEventListener('click', function(e) {
+          const link = e.target.closest('a');
+          if (link) {
+            const href = link.getAttribute('href') || '';
+            if (href === '' || href === '#' || href === './' || 
+                href === 'index.html' || href === '../index.html' || 
+                href === '/' || href.startsWith('#')) {
+              e.preventDefault();
+              e.stopPropagation();
+              return false;
+            }
+            link.setAttribute('target', '_self');
+          }
+        }, true);
+        document.addEventListener('submit', function(e) {
+          if (!e.target.getAttribute('target')) {
+            e.target.setAttribute('target', '_self');
+          }
+        }, true);
+      })();
+    <\/script>
+  `;
+  
   const source = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base target="_self">
   <style>
     body { margin: 0; padding: 0; background: #ffffff; }
     ${proj.css || ''}
@@ -250,6 +315,7 @@ function openInNewTab() {
 </head>
 <body>
   ${proj.html || ''}
+  ${navigationGuard}
   <script>
     try { ${proj.js || ''} } catch(e) { console.error(e); }
   <\/script>
