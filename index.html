@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shizuka's Portfolio | Psalms C. Juco</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.0/index.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5.0.0/index.css">
+  <link rel="stylesheet" href="portfolio.css">
+</head>
+<body>
+
+<!-- SVG Gradients for Golden Social Icons -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f0d060"/>
+      <stop offset="50%" stop-color="#d4af37"/>
+      <stop offset="100%" stop-color="#a08020"/>
+    </linearGradient>
+    <linearGradient id="goldGradientBright" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff4b0"/>
+      <stop offset="30%" stop-color="#f0d060"/>
+      <stop offset="60%" stop-color="#d4af37"/>
+      <stop offset="100%" stop-color="#f0d060"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<!-- ===== CUSTOM CURSOR (Golden Ornate Sword) ===== -->
+<div class="custom-cursor" id="customCursor">
+  <img src="Sword Cursor.png" alt="cursor" draggable="false">
+  <div class="sword-glow"></div>
+  <div class="sword-sparkle"></div>
+</div>
+
+<!-- ===== BACKGROUND DECORATIVE SWORD ===== -->
+<div class="bg-sword" id="bgSword">
+  <svg width="100%" height="100%" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bgBlade" x1="40" y1="40" x2="160" y2="160" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#1a1a1a"/>
+        <stop offset="50%" stop-color="#0a0a0a"/>
+        <stop offset="100%" stop-color="#000000"/>
+      </linearGradient>
+      <linearGradient id="bgGold" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#f0d060"/>
+        <stop offset="50%" stop-color="#d4af37"/>
+        <stop offset="100%" stop-color="#8a6d1c"/>
+      </linearGradient>
+      <filter id="bgGlow">
+        <feGaussianBlur stdDeviation="4" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <path d="M 40,40 L 200,120 L 120,200 Z" fill="url(#bgBlade)" stroke="url(#bgGold)" stroke-width="3"/>
+    <path d="M 60,60 L 160,160" stroke="#d4af37" stroke-width="2" opacity="0.4" filter="url(#bgGlow)"/>
+    <path d="M 240,60 L 260,100 L 100,260 L 60,240 Z" fill="#050505" stroke="url(#bgGold)" stroke-width="3" filter="url(#bgGlow)"/>
+    <path d="M 200,160 L 320,280 L 280,320 L 160,200 Z" fill="#050505" stroke="url(#bgGold)" stroke-width="2"/>
+    <path d="M 210,170 L 290,250 M 230,190 L 310,270" stroke="#d4af37" stroke-width="2" opacity="0.5"/>
+    <circle cx="320" cy="320" r="15" fill="url(#bgGold)" filter="url(#bgGlow)"/>
+    <path d="M 50,50 L 150,150" stroke="#f0d060" stroke-width="1" opacity="0.2" stroke-dasharray="4 4"/>
+  </svg>
+</div>
+
+<div class="cursor-glow" id="cursorGlow"></div>
+<div class="scroll-progress" id="scrollProgress"></div>
+<div class="gold-grid"></div>
+<div class="bg-orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+<div id="particles"></div>
+
+<nav>
+  <div class="logo">PORT<span>.</span>FOLIO</div>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#home">Home</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#skills">Skills</a></li>
+    <li><a href="#projects">Projects</a></li>
+    <li><a href="#feedbacks">Feedbacks</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <button class="menu-btn" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+</nav>
+
+<section class="hero" id="home">
+  <div class="hero-content">
+    <div class="hero-text">
+      <div class="hero-badge reveal">✨ Available for freelance work</div>
+      <h1 class="reveal">Hi, I'm <span class="accent">Psalms C. Juco</span></h1>
+      <p class="tag reveal">Creative <span>developer</span> & digital designer crafting bold, modern experiences on the web.</p>
+      <div class="cta-group reveal">
+        <a href="#projects" class="btn btn-primary">View My Work <span class="btn-arrow">→</span></a>
+        <a href="#contact" class="btn btn-outline">Get In Touch</a>
+      </div>
+      <div class="hero-stats reveal">
+        <div class="hero-stat"><div class="hero-stat-num">10+</div><div class="hero-stat-lbl">Projects</div></div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat"><div class="hero-stat-num">3</div><div class="hero-stat-lbl">Years Exp</div></div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat"><div class="hero-stat-num">∞</div><div class="hero-stat-lbl">Passion</div></div>
+      </div>
+    </div>
+    <div class="hero-img reveal">
+      <div class="ring ring-1"><div class="ring-dot"></div></div>
+      <div class="ring ring-2"><div class="ring-dot"></div></div>
+      <div class="ring ring-3"><div class="ring-dot"></div></div>
+      <div class="img-wrap">
+        <img src="Shizuka.jpg" alt="Psalms C. Juco" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 400%22><rect fill=%22%23141414%22 width=%22400%22 height=%22400%22/><text x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 fill=%22%23d4af37%22 font-size=%2260%22>👤</text></svg>'">
+      </div>
+      <div class="status-badge"><span class="dot"></span> Available for work</div>
+    </div>
+  </div>
+  <div class="scroll-indicator">
+    <div class="mouse"><div class="wheel"></div></div>
+    <p>Scroll Down</p>
+  </div>
+</section>
+
+<section class="about" id="about">
+  <div class="section-header reveal">
+    <div class="label">About Me</div>
+    <h2>A bit about who I am</h2>
+  </div>
+  <div class="shimmer-divider"></div>
+  <div class="about-grid">
+    <div class="about-text reveal">
+      <p>Hi! I'm <strong>Psalms</strong>, a <strong>third-year Bachelor of Science in Computer Science student</strong>, born on <strong>August 23, 2003</strong>. I'm passionate about technology, programming, and learning new things that can help me grow both personally and professionally.</p>
+      <p>Outside of academics, I enjoy <strong>playing video games, watching anime, and appreciating animation and creative storytelling</strong>. My interest in games has also inspired me to explore <strong>game development and software creation</strong>.</p>
+      <p>I'm someone who believes in continuous growth. In the future, I hope to become a <strong>skilled and successful professional in the field of technology</strong>, while continuing to improve myself, explore my interests, and create things that I can be proud of.</p>
+    </div>
+    <div class="reveal">
+      <div class="whatido-card">
+        <h3>What I do</h3>
+        <ul>
+          <li><span class="what-icon">🌐</span> Web Development</li>
+          <li><span class="what-icon">🎨</span> UI/UX Design</li>
+          <li><span class="what-icon">🎮</span> Game Development</li>
+          <li><span class="what-icon">⚙️</span> Software Creation</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="skills" id="skills">
+  <div class="section-header reveal">
+    <div class="label">My Skills</div>
+    <h2>Tools & Technologies</h2>
+  </div>
+  <div class="shimmer-divider"></div>
+  <div class="skills-tabs reveal">
+    <button class="tab-btn active" onclick="switchSkillTab('frontend', this)">Frontend</button>
+    <button class="tab-btn" onclick="switchSkillTab('backend', this)">Backend</button>
+    <button class="tab-btn" onclick="switchSkillTab('design', this)">Design</button>
+    <button class="tab-btn" onclick="switchSkillTab('mobile', this)">Mobile</button>
+  </div>
+  <div class="skills-content-wrapper reveal">
+    <div id="skillsContent" class="skills-content"></div>
+  </div>
+</section>
+
+<section class="projects" id="projects">
+  <div class="section-header reveal">
+    <div class="label">My Work</div>
+    <h2>Featured Projects</h2>
+    <p class="section-sub">Click any project to explore it in detail</p>
+  </div>
+  <div class="shimmer-divider"></div>
+  <div class="projects-grid" id="projectsGrid"></div>
+  <div class="admin-actions">
+    <button class="add-btn" onclick="openProjectModal()">+ Add / Edit Project</button>
+    <button class="add-btn secondary" onclick="exportProjects()">📋 Export Projects to JS</button>
+  </div>
+</section>
+
+<section class="feedbacks" id="feedbacks">
+  <div class="section-header reveal">
+    <div class="label">Testimonials</div>
+    <h2>What People Say</h2>
+  </div>
+  <div class="shimmer-divider"></div>
+  <div class="comment-form reveal">
+    <div class="comment-form-header">
+      <div class="comment-icon">💬</div>
+      <h3>Leave a Comment</h3>
+    </div>
+    <form onsubmit="addPublicComment(event)">
+      <div class="form-row">
+        <input type="text" id="commentName" placeholder="Your Name" required>
+        <input type="text" id="commentRole" placeholder="Your Role (e.g., Client)">
+      </div>
+      <textarea id="commentText" rows="3" placeholder="Your message..." required></textarea>
+      <button type="submit" class="btn btn-primary">Post Comment</button>
+    </form>
+    <p class="form-note">💡 <em>Note: This is a local demo. For public comments, use <a href="https://giscus.app" target="_blank">Giscus</a> or <a href="https://disqus.com" target="_blank">Disqus</a>.</em></p>
+  </div>
+  <div class="feedbacks-grid" id="feedbacksGrid"></div>
+  <button class="add-btn" onclick="clearAllComments()"> Clear All Comments (Admin)</button>
+</section>
+
+<section class="contact" id="contact">
+  <div class="contact-box reveal">
+    <div class="contact-icon">✉️</div>
+    <h2>Let's Work Together</h2>
+    <p>Have a project in mind? Let's build something amazing together.</p>
+    <form action="https://formsubmit.co/psalmsjuco707@gmail.com" method="POST" class="contact-form">
+      <input type="hidden" name="_subject" value="New Message from Portfolio">
+      <input type="hidden" name="_captcha" value="false">
+      <input type="hidden" name="_template" value="table">
+      <input type="text" name="_honey" style="display:none">
+      <div class="form-row">
+        <input type="text" name="name" placeholder="Your Name" required>
+        <input type="email" name="email" placeholder="Your Email" required>
+      </div>
+      <textarea name="message" rows="4" placeholder="Your message..." required></textarea>
+      <button type="submit" class="btn btn-primary btn-full">Send Message <span class="btn-arrow">→</span></button>
+      <p id="formStatus" class="form-status"></p>
+    </form>
+    <div class="socials">
+      <a href="https://www.facebook.com/1Shizuka2/" target="_blank" title="Facebook" class="social-icon" aria-label="Facebook">
+        <svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+      </a>
+      <a href="https://x.com/Kanashimi_23" target="_blank" title="Twitter / X" class="social-icon" aria-label="Twitter">
+        <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </a>
+      <a href="https://www.instagram.com/psalmsjuco23/" target="_blank" title="Instagram" class="social-icon" aria-label="Instagram">
+        <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+      </a>
+      <a href="https://github.com/psalmsjuco707-crypto" target="_blank" title="GitHub" class="social-icon" aria-label="GitHub">
+        <svg viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>© 2026 Psalms C. Juco. Crafted with <span>♥</span> passion.</p>
+  <button onclick="toggleAdminMode()" class="admin-toggle">[ Admin Mode ]</button>
+</footer>
+
+<div id="projectModal" class="modal">
+  <div class="modal-content">
+    <span class="close-modal" onclick="closeModal('projectModal')">&times;</span>
+    <h3 id="modalTitle">Add New Project</h3>
+    <form id="projectForm" onsubmit="saveProject(event)">
+      <input type="hidden" id="projId">
+      <label>Project Title</label>
+      <input type="text" id="projTitle" required>
+      <label>Description</label>
+      <input type="text" id="projDesc" required>
+      <label>Project Type</label>
+      <select id="projType" onchange="toggleCodeFields()">
+        <option value="web">🌐 Web Project (HTML/CSS/JS)</option>
+        <option value="cpp">⚙️ C++ Project (Interactive)</option>
+      </select>
+      <label>Project Image</label>
+      <div class="image-upload-container">
+        <img id="projImagePreview" src="" alt="Preview" class="image-preview">
+        <input type="file" id="projImageFile" accept="image/jpeg, image/png, image/webp" class="file-input">
+        <label for="projImageFile" class="file-label">📷 Click to Upload Image</label>
+        <input type="hidden" id="projImageBase64">
+      </div>
+      <div id="codeFieldsCpp" class="code-fields">
+        <label>C++ Code</label>
+        <textarea id="projCode" rows="6" class="code-input"></textarea>
+      </div>
+      <div id="codeFieldsWeb" class="code-fields">
+        <label>HTML</label>
+        <textarea id="projHtml" rows="3" class="code-input"></textarea>
+        <label>CSS</label>
+        <textarea id="projCss" rows="3" class="code-input"></textarea>
+        <label>JavaScript</label>
+        <textarea id="projJs" rows="3" class="code-input"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Save Project</button>
+    </form>
+  </div>
+</div>
+
+<div id="projectViewer" class="project-viewer">
+  <div class="viewer-container">
+    <div class="viewer-header">
+      <div class="viewer-title-area">
+        <span class="viewer-icon" id="viewerIcon">🌐</span>
+        <div>
+          <h2 id="viewerTitle">Project Title</h2>
+          <p id="viewerDesc">Description</p>
+        </div>
+      </div>
+      <div class="viewer-actions">
+        <button class="viewer-action-btn" id="viewerNewTabBtn" onclick="openInNewTab()" style="display:none;">↗ Open in New Tab</button>
+        <button class="viewer-action-btn" id="viewerFullscreenBtn" onclick="toggleViewerFullscreen()">⛶ Fullscreen</button>
+        <button class="viewer-action-btn primary" id="viewerRunBtn" onclick="runViewerCode()">▶ Run</button>
+        <button class="viewer-close" onclick="closeViewer()">✕</button>
+      </div>
+    </div>
+    <div class="viewer-tabs" id="viewerTabs"></div>
+    <div class="viewer-body">
+      <div class="viewer-code">
+        <div class="viewer-code-header">
+          <span>💻 Code</span>
+          <span class="viewer-code-status">● Ready</span>
+        </div>
+        <pre id="viewerCodeDisplay" class="viewer-code-block"></pre>
+      </div>
+      <div class="viewer-preview" id="viewerPreviewPanel">
+        <div class="viewer-preview-header">
+          <span id="previewLabel">🔍 Preview</span>
+        </div>
+        <div class="viewer-preview-content" id="viewerPreview"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button onclick="toggleAdminMode()" class="floating-admin-btn" title="Toggle Admin Mode">⚙️</button>
+<button onclick="window.scrollTo({top:0, behavior:'smooth'})" class="back-to-top" id="backToTop" title="Back to top">↑</button>
+
+<script src="https://cdn.jsdelivr.net/npm/JSCPP@2.0.6/dist/JSCPP.min.js"></script>
+<script src="portfolio.js"></script>
+</body>
+</html>
