@@ -177,152 +177,53 @@ function switchViewerTab(key, tabEl) {
   document.getElementById('viewerCodeDisplay').textContent = (proj.type === 'cpp') ? (proj.code || '') : (proj[key] || '');
 }
 
-// ===== FIXED: MULTI-PAGE SIMULATOR FOR WEB PROJECTS =====
+// ===== FIXED: WEB PREVIEW WITH EXTERNAL URL SUPPORT =====
 function renderWebPreview(proj) {
   const preview = document.getElementById('viewerPreview');
+  
+  // If project has an external URL, show a link card instead of iframe
+  if (proj.externalUrl) {
+    preview.innerHTML = `
+      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:40px; text-align:center; background:linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);">
+        <div style="font-size:5rem; margin-bottom:20px;">🌐</div>
+        <h2 style="color:#333; margin-bottom:10px; font-size:1.8rem;">${proj.title}</h2>
+        <p style="color:#666; margin-bottom:30px; max-width:500px; line-height:1.6;">${proj.desc}</p>
+        <a href="${proj.externalUrl}" target="_blank" rel="noopener noreferrer" 
+           style="padding:15px 40px; background:linear-gradient(135deg, #ff8c28, #d4af37); 
+                  color:#000; text-decoration:none; border-radius:50px; font-weight:600; 
+                  font-size:1.1rem; box-shadow:0 4px 20px rgba(255,140,40,0.3);
+                  transition:all 0.3s; display:inline-flex; align-items:center; gap:10px;"
+           onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 30px rgba(255,140,40,0.5)'"
+           onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 20px rgba(255,140,40,0.3)'">
+          Open Full System <span style="font-size:1.3rem;">↗</span>
+        </a>
+        <p style="color:#999; font-size:0.85rem; margin-top:25px; max-width:400px;">
+          This will open the complete system in a new tab with full functionality
+        </p>
+      </div>
+    `;
+    return;
+  }
+  
+  // Otherwise, use the iframe for simple single-file projects
   preview.innerHTML = '';
-
   const iframe = document.createElement('iframe');
   iframe.style.width = '100%';
   iframe.style.height = '100%';
   iframe.style.minHeight = '400px';
   iframe.style.border = 'none';
   iframe.style.backgroundColor = '#ffffff';
-  iframe.style.pointerEvents = 'auto';
-  
-  // Maximum permissions for full functionality
-  iframe.sandbox = 'allow-scripts allow-modals allow-forms allow-same-origin allow-popups allow-top-navigation-by-user-activation allow-pointer-lock';
-  
-  // Multi-page simulator that intercepts navigation and simulates page changes
-  const multiPageSimulator = `
-    <script>
-      (function() {
-        // Store all "pages" as hidden divs
-        const pages = {};
-        let currentPage = 'index';
-        
-        // Function to show a specific page
-        function showPage(pageName) {
-          // Hide all pages
-          document.querySelectorAll('.simulated-page').forEach(p => {
-            p.style.display = 'none';
-          });
-          
-          // Show requested page
-          const targetPage = document.getElementById('page-' + pageName);
-          if (targetPage) {
-            targetPage.style.display = 'block';
-            currentPage = pageName;
-            console.log('Navigated to:', pageName);
-          } else {
-            // If page doesn't exist, show current page
-            console.log('Page not found:', pageName, '- staying on current page');
-          }
-        }
-        
-        // Intercept ALL link clicks
-        document.addEventListener('click', function(e) {
-          const link = e.target.closest('a');
-          if (link) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const href = link.getAttribute('href') || '';
-            
-            // Extract page name from href (e.g., "dashboard.html" -> "dashboard")
-            let pageName = href.replace('.html', '').replace('./', '').replace('../', '').replace('/', '');
-            
-            // If it's just "#" or empty, stay on current page
-            if (href === '#' || href === '' || href === './') {
-              console.log('Anchor link clicked, staying on current page');
-              return false;
-            }
-            
-            // Try to navigate to the page
-            showPage(pageName);
-            return false;
-          }
-        }, true);
-        
-        // Intercept form submissions
-        document.addEventListener('submit', function(e) {
-          e.preventDefault();
-          console.log('Form submitted, preventing default behavior');
-          // You can add custom form handling here
-          alert('Form submitted! (In a real app, this would process the data)');
-          return false;
-        }, true);
-        
-        // Override window.location to prevent navigation
-        const originalLocation = window.location;
-        Object.defineProperty(window, 'location', {
-          get: function() { return originalLocation; },
-          set: function(value) { 
-            console.log('Blocked navigation to:', value);
-            return false;
-          }
-        });
-        
-        // Override window.open
-        const originalOpen = window.open;
-        window.open = function(url, name, features) {
-          console.log('Blocked window.open to:', url);
-          return null;
-        };
-        
-        // Initialize: wrap all content in a "page" div
-        document.addEventListener('DOMContentLoaded', function() {
-          const body = document.body;
-          const content = body.innerHTML;
-          body.innerHTML = '<div id="page-index" class="simulated-page" style="display:block;">' + content + '</div>';
-          
-          // Create placeholder pages for common navigation
-          const commonPages = ['dashboard', 'members', 'add-members', 'settings', 'profile', 'reports'];
-          commonPages.forEach(page => {
-            if (!document.getElementById('page-' + page)) {
-              const pageDiv = document.createElement('div');
-              pageDiv.id = 'page-' + page;
-              pageDiv.className = 'simulated-page';
-              pageDiv.style.display = 'none';
-              pageDiv.innerHTML = '<div style="padding:40px; text-align:center; background:#f5f5f5; border-radius:8px; margin:20px;"><h2>' + page.charAt(0).toUpperCase() + page.slice(1).replace('-', ' ') + ' Page</h2><p style="color:#666; margin-top:10px;">This is a simulated page. In your actual Gym System, this would show the ' + page + ' content.</p><p style="color:#999; font-size:14px; margin-top:20px;">To make this fully functional, you need to add the HTML content for this page in your project settings.</p></div>';
-              body.appendChild(pageDiv);
-            }
-          });
-        });
-      })();
-    <\/script>
-  `;
+  iframe.sandbox = 'allow-scripts allow-modals allow-forms allow-same-origin';
   
   const source = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { 
-      margin: 0; 
-      padding: 0; 
-      background: #ffffff; 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-    }
-    .simulated-page {
-      width: 100%;
-      min-height: 100vh;
-    }
-    ${proj.css || ''}
-  </style>
+  <style>body { margin: 0; padding: 0; background: #ffffff; }${proj.css || ''}</style>
 </head>
 <body>
   ${proj.html || ''}
-  ${multiPageSimulator}
-  <script>
-    try { 
-      ${proj.js || ''} 
-    } catch(e) { 
-      console.error('Project JS Error:', e); 
-      document.body.innerHTML += '<div style="color:red; padding:20px; background:#ffebee; border:1px solid red; border-radius:4px; margin:20px; font-family:sans-serif;"><strong>JS Error in Project:</strong><br>' + e.message + '</div>';
-    }
-  <\/script>
+  <script>try { ${proj.js || ''} } catch(e) { console.error(e); }<\/script>
 </body>
 </html>`;
   
@@ -343,99 +244,25 @@ document.addEventListener('fullscreenchange', () => {
   if (btn) btn.innerHTML = document.fullscreenElement ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
 });
 
-// ===== FIXED: NEW TAB WITH MULTI-PAGE SIMULATOR =====
 function openInNewTab() {
   const proj = currentViewerProject;
   if (!proj || proj.type !== 'web') return;
   
-  const multiPageSimulator = `
-    <script>
-      (function() {
-        const pages = {};
-        let currentPage = 'index';
-        
-        function showPage(pageName) {
-          document.querySelectorAll('.simulated-page').forEach(p => {
-            p.style.display = 'none';
-          });
-          
-          const targetPage = document.getElementById('page-' + pageName);
-          if (targetPage) {
-            targetPage.style.display = 'block';
-            currentPage = pageName;
-          }
-        }
-        
-        document.addEventListener('click', function(e) {
-          const link = e.target.closest('a');
-          if (link) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const href = link.getAttribute('href') || '';
-            let pageName = href.replace('.html', '').replace('./', '').replace('../', '').replace('/', '');
-            
-            if (href === '#' || href === '' || href === './') {
-              return false;
-            }
-            
-            showPage(pageName);
-            return false;
-          }
-        }, true);
-        
-        document.addEventListener('submit', function(e) {
-          e.preventDefault();
-          alert('Form submitted!');
-          return false;
-        }, true);
-        
-        document.addEventListener('DOMContentLoaded', function() {
-          const body = document.body;
-          const content = body.innerHTML;
-          body.innerHTML = '<div id="page-index" class="simulated-page" style="display:block;">' + content + '</div>';
-          
-          const commonPages = ['dashboard', 'members', 'add-members', 'settings', 'profile', 'reports'];
-          commonPages.forEach(page => {
-            if (!document.getElementById('page-' + page)) {
-              const pageDiv = document.createElement('div');
-              pageDiv.id = 'page-' + page;
-              pageDiv.className = 'simulated-page';
-              pageDiv.style.display = 'none';
-              pageDiv.innerHTML = '<div style="padding:40px; text-align:center; background:#f5f5f5; border-radius:8px; margin:20px;"><h2>' + page.charAt(0).toUpperCase() + page.slice(1).replace('-', ' ') + ' Page</h2><p style="color:#666; margin-top:10px;">This is a simulated page.</p></div>';
-              body.appendChild(pageDiv);
-            }
-          });
-        });
-      })();
-    <\/script>
-  `;
+  // If external URL, open it directly
+  if (proj.externalUrl) {
+    window.open(proj.externalUrl, '_blank');
+    return;
+  }
   
   const source = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { 
-      margin: 0; 
-      padding: 0; 
-      background: #ffffff; 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-    }
-    .simulated-page {
-      width: 100%;
-      min-height: 100vh;
-    }
-    ${proj.css || ''}
-  </style>
+  <style>body { margin: 0; padding: 0; background: #ffffff; }${proj.css || ''}</style>
 </head>
 <body>
   ${proj.html || ''}
-  ${multiPageSimulator}
-  <script>
-    try { ${proj.js || ''} } catch(e) { console.error(e); }
-  <\/script>
+  <script>try { ${proj.js || ''} } catch(e) { console.error(e); }<\/script>
 </body>
 </html>`;
   const blob = new Blob([source], { type: 'text/html' });
@@ -562,6 +389,10 @@ function openProjectModal(projectId = null) {
     document.getElementById('projDesc').value = proj.desc;
     document.getElementById('projType').value = proj.type;
     
+    // Load external URL if it exists
+    const externalUrlInput = document.getElementById('projExternalUrl');
+    if (externalUrlInput) externalUrlInput.value = proj.externalUrl || '';
+    
     if (proj.image && proj.image.startsWith('data:image')) {
       preview.src = proj.image;
       base64Input.value = proj.image;
@@ -630,6 +461,13 @@ function saveProject(event) {
     type: type,
     image: document.getElementById('projImageBase64').value || ''
   };
+  
+  // Save external URL if it exists
+  const externalUrlInput = document.getElementById('projExternalUrl');
+  if (externalUrlInput && externalUrlInput.value.trim()) {
+    projectData.externalUrl = externalUrlInput.value.trim();
+  }
+  
   if (type === 'cpp') projectData.code = document.getElementById('projCode').value;
   else if (type === 'web') {
     projectData.html = document.getElementById('projHtml').value;
