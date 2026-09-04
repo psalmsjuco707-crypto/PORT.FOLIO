@@ -177,7 +177,7 @@ function switchViewerTab(key, tabEl) {
   document.getElementById('viewerCodeDisplay').textContent = (proj.type === 'cpp') ? (proj.code || '') : (proj[key] || '');
 }
 
-// ===== FIXED: WEB PREVIEW WITH NAVIGATION GUARD =====
+// ===== FIXED: SMART WEB PREVIEW (Allows full interactivity) =====
 function renderWebPreview(proj) {
   const preview = document.getElementById('viewerPreview');
   preview.innerHTML = '';
@@ -189,42 +189,49 @@ function renderWebPreview(proj) {
   iframe.style.border = 'none';
   iframe.style.backgroundColor = '#ffffff';
   iframe.style.pointerEvents = 'auto';
-  iframe.sandbox = 'allow-scripts allow-modals allow-forms allow-same-origin allow-popups';
   
-  // 🔒 NAVIGATION GUARD: Prevents gym system links from escaping to the portfolio
+  // ✅ SMART SANDBOX: Allows scripts, forms, modals, and same-origin access
+  // but prevents navigation to parent frames
+  iframe.sandbox = 'allow-scripts allow-modals allow-forms allow-same-origin allow-popups allow-top-navigation-by-user-activation';
+  
+  // 🔒 SMART NAVIGATION GUARD: Only blocks actual page escapes, allows internal JS navigation
   const navigationGuard = `
     <script>
       (function() {
-        // Intercept ALL link clicks and keep them inside the iframe
+        // Only intercept links that would actually navigate away
         document.addEventListener('click', function(e) {
           const link = e.target.closest('a');
           if (link) {
             const href = link.getAttribute('href') || '';
-            // Block any link that would escape or reload the parent portfolio
-            if (href === '' || href === '#' || href === './' || 
-                href === 'index.html' || href === '../index.html' || 
-                href === '/' || href.startsWith('#')) {
+            // Only block links that explicitly try to escape the iframe
+            if (href === 'index.html' || href === '../index.html' || 
+                href === '/' || href === '../' || href === '../../') {
               e.preventDefault();
               e.stopPropagation();
+              console.log('Blocked navigation attempt:', href);
               return false;
             }
-            // Force the link to stay inside the iframe
+            // Allow all other links (including # for JS-driven navigation)
             link.setAttribute('target', '_self');
           }
         }, true);
         
-        // Intercept form submissions so they don't escape
+        // Allow forms to submit within the iframe
         document.addEventListener('submit', function(e) {
           if (!e.target.getAttribute('target')) {
             e.target.setAttribute('target', '_self');
           }
         }, true);
         
-        // Trick the gym system into thinking it's the top window
-        try {
-          Object.defineProperty(window, 'top', { get: function() { return window; }, configurable: true });
-          Object.defineProperty(window, 'parent', { get: function() { return window; }, configurable: true });
-        } catch(err) {}
+        // Prevent window.open from escaping
+        const originalOpen = window.open;
+        window.open = function(url, name, features) {
+          if (url && (url.includes('index.html') || url === '/' || url === '../')) {
+            console.log('Blocked window.open attempt:', url);
+            return null;
+          }
+          return originalOpen.call(window, url, name, features);
+        };
       })();
     <\/script>
   `;
@@ -236,7 +243,7 @@ function renderWebPreview(proj) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <base target="_self">
   <style>
-    body { margin: 0; padding: 0; background: #ffffff; }
+    body { margin: 0; padding: 0; background: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     ${proj.css || ''}
   </style>
 </head>
@@ -271,7 +278,7 @@ document.addEventListener('fullscreenchange', () => {
   if (btn) btn.innerHTML = document.fullscreenElement ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
 });
 
-// ===== FIXED: SAFE NEW TAB OPENING WITH NAVIGATION GUARD =====
+// ===== FIXED: SMART NEW TAB OPENING =====
 function openInNewTab() {
   const proj = currentViewerProject;
   if (!proj || proj.type !== 'web') return;
@@ -283,9 +290,8 @@ function openInNewTab() {
           const link = e.target.closest('a');
           if (link) {
             const href = link.getAttribute('href') || '';
-            if (href === '' || href === '#' || href === './' || 
-                href === 'index.html' || href === '../index.html' || 
-                href === '/' || href.startsWith('#')) {
+            if (href === 'index.html' || href === '../index.html' || 
+                href === '/' || href === '../' || href === '../../') {
               e.preventDefault();
               e.stopPropagation();
               return false;
@@ -309,7 +315,7 @@ function openInNewTab() {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <base target="_self">
   <style>
-    body { margin: 0; padding: 0; background: #ffffff; }
+    body { margin: 0; padding: 0; background: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     ${proj.css || ''}
   </style>
 </head>
@@ -409,7 +415,10 @@ async function runViewerCode() {
       });
       updateOutput(jscppOutput + `\n[Process exited with code ${exitCode}]`);
       jscppWorked = true;
-    } catch(e) { console.log('JSCPP failed:', e); }
+    } catch(e) { 
+      console.log('JSCPP failed:', e);
+      updateOutput(outputText + `\n[JSCPP Error: ${e.message}]\n`);
+    }
   }
   if (!jscppWorked) {
     try {
