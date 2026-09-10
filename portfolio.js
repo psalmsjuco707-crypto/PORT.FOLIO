@@ -2,11 +2,12 @@
 const defaultProjects = [
   {
     id: 1,
-    title: "C++ Hello World",
-    desc: "A simple C++ program with output.",
-    type: "cpp",
-    image: "",
-    code: '#include <iostream>\nusing namespace std;\nint main() {\n    cout << "Hello, World!" << endl;\n    return 0;\n}'
+    title: "C++ Interactive Demos",
+    desc: "Explore 10 interactive C++ demos compiled and running directly in your browser.",
+    type: "external",
+    isExternal: true,
+    link: "https://psalmsjuco707-crypto.github.io/C-Interactive-Platform/",
+    image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 200'><rect fill='%230a0a0a' width='400' height='200'/><text x='50%25' y='50%25' text-anchor='middle' fill='%23d4af37' font-size='22' font-family='monospace'>C++ Demos ↗</text></svg>"
   },
   {
     id: 2,
@@ -91,7 +92,11 @@ function renderProjects() {
     card.className = 'project-card reveal visible';
     card.onclick = (e) => {
       if (e.target.closest('.delete-btn')) return;
-      openViewer(proj.id);
+      if (proj.isExternal && proj.link) {
+        window.open(proj.link, '_blank');
+      } else {
+        openViewer(proj.id);
+      }
     };
 
     const imgHtml = proj.image 
@@ -105,7 +110,7 @@ function renderProjects() {
         ${imgHtml}
       </div>
       <div class="project-info">
-        <span class="project-type-badge ${proj.type === 'cpp' ? 'cpp' : ''}">${proj.type === 'cpp' ? '⚙️ C++' : '🌐 Web'}</span>
+        <span class="project-type-badge ${proj.isExternal ? 'external' : ''}">${proj.isExternal ? '🔗 External' : '🌐 Web'}</span>
         <h3>${proj.title}</h3>
         <p>${proj.desc}</p>
       </div>
@@ -123,46 +128,33 @@ function openViewer(projectId) {
 
   document.getElementById('viewerTitle').textContent = proj.title;
   document.getElementById('viewerDesc').textContent = proj.desc;
-  document.getElementById('viewerIcon').textContent = proj.type === 'cpp' ? '⚙️' : '🌐';
+  document.getElementById('viewerIcon').textContent = '🌐';
 
-  const isWeb = proj.type === 'web';
   document.getElementById('viewerFullscreenBtn').style.display = 'inline-flex';
   document.getElementById('viewerFullscreenBtn').innerHTML = '⛶ Fullscreen';
-  document.getElementById('viewerNewTabBtn').style.display = isWeb ? 'inline-flex' : 'none';
+  document.getElementById('viewerNewTabBtn').style.display = 'inline-flex';
   
   if (document.fullscreenElement) document.exitFullscreen();
 
   const tabs = document.getElementById('viewerTabs');
   tabs.innerHTML = '';
 
-  if (proj.type === 'cpp') {
+  const files = [
+    { key: 'html', label: 'index.html' },
+    { key: 'css', label: 'style.css' },
+    { key: 'js', label: 'script.js' }
+  ];
+  files.forEach((file, i) => {
     const tab = document.createElement('button');
-    tab.className = 'viewer-tab active';
-    tab.textContent = 'main.cpp';
-    tab.onclick = () => switchViewerTab('cpp', tab);
+    tab.className = 'viewer-tab' + (i === 0 ? ' active' : '');
+    tab.textContent = file.label;
+    tab.onclick = () => switchViewerTab(file.key, tab);
     tabs.appendChild(tab);
-    currentViewerTab = 'cpp';
-    document.getElementById('viewerCodeDisplay').textContent = proj.code || '';
-    document.getElementById('previewLabel').textContent = '💻 Terminal Output';
-    document.getElementById('viewerPreview').innerHTML = '<div class="cpp-output">Click "▶ Run" to compile and execute.</div>';
-  } else {
-    const files = [
-      { key: 'html', label: 'index.html' },
-      { key: 'css', label: 'style.css' },
-      { key: 'js', label: 'script.js' }
-    ];
-    files.forEach((file, i) => {
-      const tab = document.createElement('button');
-      tab.className = 'viewer-tab' + (i === 0 ? ' active' : '');
-      tab.textContent = file.label;
-      tab.onclick = () => switchViewerTab(file.key, tab);
-      tabs.appendChild(tab);
-    });
-    currentViewerTab = 'html';
-    document.getElementById('viewerCodeDisplay').textContent = proj.html || '';
-    document.getElementById('previewLabel').textContent = '🔍 Live Preview';
-    renderWebPreview(proj);
-  }
+  });
+  currentViewerTab = 'html';
+  document.getElementById('viewerCodeDisplay').textContent = proj.html || '';
+  document.getElementById('previewLabel').textContent = '🔍 Live Preview';
+  renderWebPreview(proj);
 
   document.getElementById('projectViewer').classList.add('active');
   document.body.style.overflow = 'hidden';
@@ -174,61 +166,13 @@ function switchViewerTab(key, tabEl) {
   currentViewerTab = key;
   const proj = currentViewerProject;
   if (!proj) return;
-  document.getElementById('viewerCodeDisplay').textContent = (proj.type === 'cpp') ? (proj.code || '') : (proj[key] || '');
+  document.getElementById('viewerCodeDisplay').textContent = proj[key] || '';
 }
 
-// ===== FIXED: WEB PREVIEW WITH EXTERNAL URL SUPPORT =====
 function renderWebPreview(proj) {
   const preview = document.getElementById('viewerPreview');
-  
-  // If project has an external URL, show a link card instead of iframe
-  if (proj.externalUrl) {
-    preview.innerHTML = `
-      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:40px; text-align:center; background:linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);">
-        <div style="font-size:5rem; margin-bottom:20px;">🌐</div>
-        <h2 style="color:#333; margin-bottom:10px; font-size:1.8rem;">${proj.title}</h2>
-        <p style="color:#666; margin-bottom:30px; max-width:500px; line-height:1.6;">${proj.desc}</p>
-        <a href="${proj.externalUrl}" target="_blank" rel="noopener noreferrer" 
-           style="padding:15px 40px; background:linear-gradient(135deg, #ff8c28, #d4af37); 
-                  color:#000; text-decoration:none; border-radius:50px; font-weight:600; 
-                  font-size:1.1rem; box-shadow:0 4px 20px rgba(255,140,40,0.3);
-                  transition:all 0.3s; display:inline-flex; align-items:center; gap:10px;"
-           onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 30px rgba(255,140,40,0.5)'"
-           onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 20px rgba(255,140,40,0.3)'">
-          Open Full System <span style="font-size:1.3rem;">↗</span>
-        </a>
-        <p style="color:#999; font-size:0.85rem; margin-top:25px; max-width:400px;">
-          This will open the complete system in a new tab with full functionality
-        </p>
-      </div>
-    `;
-    return;
-  }
-  
-  // Otherwise, use the iframe for simple single-file projects
-  preview.innerHTML = '';
-  const iframe = document.createElement('iframe');
-  iframe.style.width = '100%';
-  iframe.style.height = '100%';
-  iframe.style.minHeight = '400px';
-  iframe.style.border = 'none';
-  iframe.style.backgroundColor = '#ffffff';
-  iframe.sandbox = 'allow-scripts allow-modals allow-forms allow-same-origin';
-  
-  const source = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <style>body { margin: 0; padding: 0; background: #ffffff; }${proj.css || ''}</style>
-</head>
-<body>
-  ${proj.html || ''}
-  <script>try { ${proj.js || ''} } catch(e) { console.error(e); }<\/script>
-</body>
-</html>`;
-  
-  iframe.srcdoc = source;
-  preview.appendChild(iframe);
+  const source = `<!DOCTYPE html><html><head><style>${proj.css || ''}</style></head><body>${proj.html || ''}<script>try { ${proj.js || ''} } catch(e) { console.error(e); }<\/script></body></html>`;
+  preview.innerHTML = `<iframe srcdoc="${source.replace(/"/g, '&quot;')}"></iframe>`;
 }
 
 function toggleViewerFullscreen() {
@@ -246,28 +190,9 @@ document.addEventListener('fullscreenchange', () => {
 
 function openInNewTab() {
   const proj = currentViewerProject;
-  if (!proj || proj.type !== 'web') return;
-  
-  // If external URL, open it directly
-  if (proj.externalUrl) {
-    window.open(proj.externalUrl, '_blank');
-    return;
-  }
-  
-  const source = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <style>body { margin: 0; padding: 0; background: #ffffff; }${proj.css || ''}</style>
-</head>
-<body>
-  ${proj.html || ''}
-  <script>try { ${proj.js || ''} } catch(e) { console.error(e); }<\/script>
-</body>
-</html>`;
-  const blob = new Blob([source], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
+  if (!proj) return;
+  const source = `<!DOCTYPE html><html><head><style>${proj.css || ''}</style></head><body>${proj.html || ''}<script>try { ${proj.js || ''} } catch(e) {}<\/script></body></html>`;
+  window.open(URL.createObjectURL(new Blob([source], { type: 'text/html' })), '_blank');
 }
 
 function closeViewer() {
@@ -277,95 +202,13 @@ function closeViewer() {
   currentViewerProject = null;
 }
 
-// ===== C++ INTERPRETER =====
-function smartCppInterpret(code) {
-  let output = '';
-  let vars = {};
-  code = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
-  const lines = code.split('\n');
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i].trim();
-    if (line.startsWith('#') || line.startsWith('using ') || line === '' || line === '{' || line === '}' || line.startsWith('return') || line.startsWith('int main') || line.startsWith('void main')) continue;
-    const declMatch = line.match(/^(int|double|float|char|long)\s+(\w+)\s*(?:=\s*(.+?))?\s*;?$/);
-    if (declMatch) { vars[declMatch[2]] = declMatch[3] !== undefined ? resolveExpression(declMatch[3], vars) : 0; continue; }
-    const assignMatch = line.match(/^(\w+)\s*=\s*(.+?)\s*;?$/);
-    if (assignMatch && !line.includes('cout') && !line.includes('cin')) { vars[assignMatch[1]] = resolveExpression(assignMatch[2], vars); continue; }
-    const cinMatch = line.match(/cin\s*>>\s*(\w+)/);
-    if (cinMatch) { const input = prompt(`📥 Program needs input (cin >> ${cinMatch[1]}):`); vars[cinMatch[1]] = isNaN(input) ? input : Number(input); continue; }
-    const coutMatch = line.match(/cout\s*<<\s*(.+?)\s*;?$/);
-    if (coutMatch) {
-      const parts = coutMatch[1].split('<<');
-      for (let part of parts) {
-        part = part.trim();
-        if (part === 'endl' || part === '"\\n"') output += '\n';
-        else if (part.startsWith('"') && part.endsWith('"')) output += part.slice(1, -1).replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"');
-        else if (part.startsWith("'") && part.endsWith("'")) output += part.slice(1, -1);
-        else if (vars.hasOwnProperty(part)) output += vars[part];
-        else { try { output += resolveExpression(part, vars); } catch(e) { output += part; } }
-      }
-    }
-  }
-  return output;
-}
-
-function resolveExpression(expr, vars) {
-  expr = expr.trim();
-  if (expr.startsWith('"') && expr.endsWith('"')) return expr.slice(1, -1);
-  if (!isNaN(expr) && expr !== '') return Number(expr);
-  if (vars.hasOwnProperty(expr)) return vars[expr];
-  let mathExpr = expr;
-  for (const [key, val] of Object.entries(vars)) { mathExpr = mathExpr.replace(new RegExp('\\b' + key + '\\b', 'g'), val); }
-  try { return Function('"use strict"; return (' + mathExpr + ')')(); } catch(e) { return expr; }
-}
-
-async function runViewerCode() {
+function runViewerCode() {
   const proj = currentViewerProject;
   if (!proj) return;
   const btn = document.getElementById('viewerRunBtn');
-  const preview = document.getElementById('viewerPreview');
-  if (proj.type === 'web') {
-    renderWebPreview(proj);
-    btn.innerHTML = '✓ Refreshed';
-    setTimeout(() => { btn.innerHTML = '▶ Run'; }, 1500);
-    return;
-  }
-  btn.disabled = true;
-  btn.innerHTML = '⏳ Compiling...';
-  let outputText = '';
-  const updateOutput = (text) => {
-    outputText = text;
-    const formatted = outputText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>').replace(/ /g, '&nbsp;');
-    preview.innerHTML = `<div class="cpp-output">${formatted}</div>`;
-  };
-  updateOutput('$ g++ main.cpp -o main\n');
-  await new Promise(r => setTimeout(r, 600));
-  updateOutput(outputText + '$ ./main\n');
-  await new Promise(r => setTimeout(r, 400));
-  let jscppWorked = false;
-  if (typeof JSCPP !== 'undefined') {
-    try {
-      let jscppOutput = outputText;
-      const exitCode = JSCPP.run(proj.code || '', '', {
-        stdio: {
-          write: function(s) { jscppOutput += s; updateOutput(jscppOutput); },
-          read: function() { const input = prompt('📥 Program needs input (cin):'); return (input !== null ? input : '') + '\n'; }
-        }
-      });
-      updateOutput(jscppOutput + `\n[Process exited with code ${exitCode}]`);
-      jscppWorked = true;
-    } catch(e) { 
-      console.log('JSCPP failed:', e);
-      updateOutput(outputText + `\n[JSCPP Error: ${e.message}]\n`);
-    }
-  }
-  if (!jscppWorked) {
-    try {
-      const result = smartCppInterpret(proj.code || '');
-      updateOutput(outputText + result + '\n\n[Process exited with code 0]');
-    } catch(e) { updateOutput(outputText + `\n[Error]: ${e.message || e}`); }
-  }
-  btn.disabled = false;
-  btn.innerHTML = '▶ Run Again';
+  renderWebPreview(proj);
+  btn.innerHTML = '✓ Refreshed';
+  setTimeout(() => { btn.innerHTML = '▶ Refresh'; }, 1500);
 }
 
 // ===== MODAL & FORM HANDLING =====
@@ -387,11 +230,6 @@ function openProjectModal(projectId = null) {
     document.getElementById('projId').value = proj.id;
     document.getElementById('projTitle').value = proj.title;
     document.getElementById('projDesc').value = proj.desc;
-    document.getElementById('projType').value = proj.type;
-    
-    // Load external URL if it exists
-    const externalUrlInput = document.getElementById('projExternalUrl');
-    if (externalUrlInput) externalUrlInput.value = proj.externalUrl || '';
     
     if (proj.image && proj.image.startsWith('data:image')) {
       preview.src = proj.image;
@@ -401,8 +239,11 @@ function openProjectModal(projectId = null) {
       base64Input.value = proj.image || '';
     }
     
-    if (proj.type === 'cpp') document.getElementById('projCode').value = proj.code || '';
-    else if (proj.type === 'web') {
+    if (proj.isExternal) {
+      document.getElementById('projType').value = 'external';
+      document.getElementById('projExternalUrl').value = proj.link || '';
+    } else {
+      document.getElementById('projType').value = 'web';
       document.getElementById('projHtml').value = proj.html || '';
       document.getElementById('projCss').value = proj.css || '';
       document.getElementById('projJs').value = proj.js || '';
@@ -426,11 +267,10 @@ function closeModal(modalId) {
 }
 function toggleCodeFields() {
   const type = document.getElementById('projType').value;
-  document.getElementById('codeFieldsCpp').style.display = type === 'cpp' ? 'block' : 'none';
   document.getElementById('codeFieldsWeb').style.display = type === 'web' ? 'block' : 'none';
+  document.getElementById('codeFieldsExternal').style.display = type === 'external' ? 'block' : 'none';
 }
 
-// Image upload handler
 document.addEventListener('DOMContentLoaded', () => {
   const fileInput = document.getElementById('projImageFile');
   const preview = document.getElementById('projImagePreview');
@@ -459,20 +299,15 @@ function saveProject(event) {
     title: document.getElementById('projTitle').value,
     desc: document.getElementById('projDesc').value,
     type: type,
-    image: document.getElementById('projImageBase64').value || ''
+    image: document.getElementById('projImageBase64').value || '',
+    isExternal: type === 'external'
   };
-  
-  // Save external URL if it exists
-  const externalUrlInput = document.getElementById('projExternalUrl');
-  if (externalUrlInput && externalUrlInput.value.trim()) {
-    projectData.externalUrl = externalUrlInput.value.trim();
-  }
-  
-  if (type === 'cpp') projectData.code = document.getElementById('projCode').value;
-  else if (type === 'web') {
+  if (type === 'web') {
     projectData.html = document.getElementById('projHtml').value;
     projectData.css = document.getElementById('projCss').value;
     projectData.js = document.getElementById('projJs').value;
+  } else if (type === 'external') {
+    projectData.link = document.getElementById('projExternalUrl').value;
   }
   if (id) {
     const index = projects.findIndex(p => p.id === parseInt(id));
@@ -678,18 +513,33 @@ function clearAllComments() {
   }
 }
 
+// ===== SECURE ADMIN MODE =====
 function toggleAdminMode() {
   if (!isAdmin) {
-    if (prompt('Enter admin password:') === 'PsalmsJuco_23') {
-      isAdmin = true;
-      document.body.classList.add('admin-mode');
-      renderProjects(); renderFeedbacks();
-      alert('✅ Admin Mode Enabled.');
-    }
+    document.getElementById('adminPasswordInput').value = '';
+    document.getElementById('adminPasswordError').style.display = 'none';
+    document.getElementById('adminPasswordModal').classList.add('active');
+    setTimeout(() => document.getElementById('adminPasswordInput').focus(), 100);
   } else {
     isAdmin = false;
     document.body.classList.remove('admin-mode');
-    renderProjects(); renderFeedbacks();
+    renderProjects(); 
+    renderFeedbacks();
+  }
+}
+
+function checkAdminPassword() {
+  const input = document.getElementById('adminPasswordInput').value;
+  if (input === 'PsalmsJuco_23') {
+    isAdmin = true;
+    document.body.classList.add('admin-mode');
+    renderProjects(); 
+    renderFeedbacks();
+    closeModal('adminPasswordModal');
+  } else {
+    document.getElementById('adminPasswordError').style.display = 'block';
+    document.getElementById('adminPasswordInput').value = '';
+    document.getElementById('adminPasswordInput').focus();
   }
 }
 
@@ -751,8 +601,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeViewer(); closeModal('projectModal'); }
+    if (e.key === 'Escape') { closeViewer(); closeModal('projectModal'); closeModal('adminPasswordModal'); }
   });
+
+  const adminInput = document.getElementById('adminPasswordInput');
+  if (adminInput) {
+    adminInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') checkAdminPassword();
+    });
+  }
 
   const cursorGlow = document.getElementById('cursorGlow');
   const customCursor = document.getElementById('customCursor');
@@ -783,51 +640,20 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const st = document.getElementById('formStatus');
       const sb = cf.querySelector('button[type="submit"]');
-      
-      sb.disabled = true; 
-      sb.innerHTML = '⏳ Sending...';
-      st.style.display = 'block'; 
-      st.style.color = '#fbbf24'; 
-      st.textContent = 'Sending...';
-      
+      sb.disabled = true; sb.innerHTML = '⏳ Sending...';
+      st.style.display = 'block'; st.style.color = '#fbbf24'; st.textContent = 'Sending...';
       try {
-        const formData = new FormData(cf);
-        const r = await fetch(cf.action, { 
-          method: 'POST', 
-          body: formData, 
-          headers: { 'Accept': 'application/json' },
-          mode: 'cors'
-        });
-        
-        const data = await r.json();
-        
-        if (r.ok && data.success) { 
-          st.style.color = '#4ade80'; 
-          st.textContent = '✅ Message Sent Successfully!'; 
-          cf.reset(); 
-        } else { 
-          st.style.color = '#ef4444'; 
-          st.textContent = '❌ Error: ' + (data.message || 'Form not activated. Check your email spam folder for an activation link from FormSubmit.'); 
-        }
-      } catch (err) { 
-        st.style.color = '#ef4444'; 
-        st.textContent = '❌ Network Error. This is usually caused by an Ad-Blocker (like uBlock or Brave Shields) blocking FormSubmit. Please disable it temporarily or check your email to activate the form first.'; 
-        console.error('FormSubmit fetch error:', err);
-        
-        setTimeout(() => {
-          if(confirm("Fetch failed (likely due to an Ad-Blocker). Try submitting the form normally? This will redirect you to a confirmation page.")) {
-            cf.submit();
-          }
-        }, 1000);
-      }
-      
-      sb.disabled = false; 
-      sb.innerHTML = 'Send Message <span class="btn-arrow">→</span>';
-      setTimeout(() => { st.style.display = 'none'; }, 8000);
+        const r = await fetch(cf.action, { method: 'POST', body: new FormData(cf), headers: { 'Accept': 'application/json' } });
+        if (r.ok) { st.style.color = '#4ade80'; st.textContent = '✅ Sent!'; cf.reset(); }
+        else { st.style.color = '#ef4444'; st.textContent = '❌ Error.'; }
+      } catch { st.style.color = '#ef4444'; st.textContent = '❌ Network error.'; }
+      sb.disabled = false; sb.innerHTML = 'Send Message <span class="btn-arrow">→</span>';
+      setTimeout(() => { st.style.display = 'none'; }, 5000);
     });
   }
 });
 
 window.onclick = function(e) {
   if (e.target === document.getElementById('projectModal')) closeModal('projectModal');
+  if (e.target === document.getElementById('adminPasswordModal')) closeModal('adminPasswordModal');
 };
