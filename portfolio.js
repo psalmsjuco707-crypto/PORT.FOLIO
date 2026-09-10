@@ -4,10 +4,10 @@ const defaultProjects = [
     id: 1,
     title: "C++ Interactive Demos",
     desc: "Explore 10 interactive C++ demos compiled and running directly in your browser.",
-    type: "external",
-    isExternal: true,
-    link: "https://psalmsjuco707-crypto.github.io/C-Interactive-Platform/",
-    image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 200'><rect fill='%230a0a0a' width='400' height='200'/><text x='50%25' y='50%25' text-anchor='middle' fill='%23d4af37' font-size='18' font-family='monospace'>C++ Demos ↗</text></svg>"
+    type: "web",
+    isExternal: false,
+    externalUrl: "https://psalmsjuco707-crypto.github.io/C-Interactive-Platform/",
+    image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 200'><rect fill='%230a0a0a' width='400' height='200'/><text x='50%25' y='50%25' text-anchor='middle' fill='%23d4af37' font-size='20' font-family='monospace'>C++ Interactive Platform</text></svg>"
   },
   {
     id: 2,
@@ -16,10 +16,7 @@ const defaultProjects = [
     type: "web",
     isExternal: false,
     externalUrl: "https://psalmsjuco707-crypto.github.io/Gym-Membership-Management-System/",
-    image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 200'><rect fill='%231a1a1a' width='400' height='200'/><text x='50%25' y='50%25' text-anchor='middle' fill='%23d4af37' font-size='20' font-family='sans-serif'>Gym Management 💪</text></svg>",
-    html: '<iframe src="https://psalmsjuco707-crypto.github.io/Gym-Membership-Management-System/" style="width:100%;height:100%;border:none;"></iframe>',
-    css: '',
-    js: ''
+    image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 200'><rect fill='%231a1a1a' width='400' height='200'/><text x='50%25' y='50%25' text-anchor='middle' fill='%23d4af37' font-size='20' font-family='sans-serif'>Gym Management 💪</text></svg>"
   },
   {
     id: 3,
@@ -104,25 +101,25 @@ function renderProjects() {
     card.className = 'project-card reveal visible';
     card.onclick = (e) => {
       if (e.target.closest('.delete-btn')) return;
-      if (proj.isExternal && proj.link) {
-        window.open(proj.link, '_blank');
-      } else {
-        openViewer(proj.id);
-      }
+      // Always open the viewer now, the viewer handles external URLs beautifully
+      openViewer(proj.id);
     };
 
     const imgHtml = proj.image 
       ? `<img src="${proj.image}" alt="${proj.title}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 200%22><rect fill=%22%23141414%22 width=%22400%22 height=%22200%22/><text x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 fill=%22%23888%22 font-size=%2220%22>No Image</text></svg>';">`
       : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg3);color:var(--muted);font-size:0.9rem;">📷 No Image</div>`;
 
+    const badgeText = proj.externalUrl ? '🔗 External' : '🌐 Web';
+    const badgeClass = proj.externalUrl ? 'external' : '';
+
     card.innerHTML = `
       <button class="delete-btn" onclick="event.stopPropagation(); deleteProject(${proj.id})">🗑 Delete</button>
-      <button class="delete-btn" style="right: 80px; background: var(--accent); color: #000;" onclick="event.stopPropagation(); editProject(${proj.id})">️ Edit</button>
+      <button class="delete-btn" style="right: 80px; background: var(--accent); color: #000;" onclick="event.stopPropagation(); editProject(${proj.id})">✏️ Edit</button>
       <div class="project-img">
         ${imgHtml}
       </div>
       <div class="project-info">
-        <span class="project-type-badge ${proj.isExternal ? 'external' : ''}">${proj.isExternal ? '🔗 External' : ' Web'}</span>
+        <span class="project-type-badge ${badgeClass}">${badgeText}</span>
         <h3>${proj.title}</h3>
         <p>${proj.desc}</p>
       </div>
@@ -140,7 +137,7 @@ function openViewer(projectId) {
 
   document.getElementById('viewerTitle').textContent = proj.title;
   document.getElementById('viewerDesc').textContent = proj.desc;
-  document.getElementById('viewerIcon').textContent = proj.isExternal ? '🔗' : '🌐';
+  document.getElementById('viewerIcon').textContent = proj.externalUrl ? '🔗' : '🌐';
 
   document.getElementById('viewerFullscreenBtn').style.display = 'inline-flex';
   document.getElementById('viewerFullscreenBtn').innerHTML = '⛶ Fullscreen';
@@ -151,9 +148,8 @@ function openViewer(projectId) {
   const tabs = document.getElementById('viewerTabs');
   tabs.innerHTML = '';
 
-  // Check if it's an external URL project
   if (proj.externalUrl) {
-    // Create a single tab for external URL
+    // External URL Project: Show single "Live Preview" tab
     const tab = document.createElement('button');
     tab.className = 'viewer-tab active';
     tab.textContent = 'Live Preview';
@@ -161,11 +157,11 @@ function openViewer(projectId) {
     tabs.appendChild(tab);
     currentViewerTab = 'preview';
     
-    document.getElementById('viewerCodeDisplay').textContent = `// This project is hosted externally\n// URL: ${proj.externalUrl}\n// Click "Open in New Tab" to visit`;
+    document.getElementById('viewerCodeDisplay').textContent = `// This project is hosted externally\n// URL: ${proj.externalUrl}\n// Click "Open in New Tab" to visit the full site`;
     document.getElementById('previewLabel').textContent = '🔍 Live Preview';
     renderExternalPreview(proj);
   } else if (proj.type === 'web') {
-    // Regular web project with code tabs
+    // Regular Web Project: Show code tabs
     const files = [
       { key: 'html', label: 'index.html' },
       { key: 'css', label: 'style.css' },
@@ -211,7 +207,8 @@ function renderWebPreview(proj) {
 function renderExternalPreview(proj) {
   const preview = document.getElementById('viewerPreview');
   if (proj.externalUrl) {
-    preview.innerHTML = `<iframe src="${proj.externalUrl}" style="width:100%;height:100%;border:none;"></iframe>`;
+    // Added allow="fullscreen" so the embedded site can go fullscreen too!
+    preview.innerHTML = `<iframe src="${proj.externalUrl}" style="width:100%;height:100%;border:none;" allow="fullscreen"></iframe>`;
   }
 }
 
@@ -290,21 +287,14 @@ function openProjectModal(projectId = null) {
       base64Input.value = proj.image || '';
     }
     
-    if (proj.isExternal) {
+    if (proj.externalUrl) {
       document.getElementById('projType').value = 'external';
-      document.getElementById('projExternalUrl').value = proj.link || '';
+      document.getElementById('projExternalUrl').value = proj.externalUrl || '';
     } else {
       document.getElementById('projType').value = 'web';
-      if (proj.externalUrl) {
-        // It's a web project with external URL
-        document.getElementById('projExternalUrl').value = proj.externalUrl || '';
-        // Switch to external URL mode in the modal
-        document.getElementById('projType').value = 'external';
-      } else {
-        document.getElementById('projHtml').value = proj.html || '';
-        document.getElementById('projCss').value = proj.css || '';
-        document.getElementById('projJs').value = proj.js || '';
-      }
+      document.getElementById('projHtml').value = proj.html || '';
+      document.getElementById('projCss').value = proj.css || '';
+      document.getElementById('projJs').value = proj.js || '';
     }
     toggleCodeFields();
   } else {
@@ -352,6 +342,8 @@ function saveProject(event) {
   event.preventDefault();
   const id = document.getElementById('projId').value;
   const type = document.getElementById('projType').value;
+  const externalUrlVal = document.getElementById('projExternalUrl').value;
+  
   const projectData = {
     id: id ? parseInt(id) : Date.now(),
     title: document.getElementById('projTitle').value,
@@ -361,21 +353,15 @@ function saveProject(event) {
     isExternal: type === 'external'
   };
   
-  if (type === 'external') {
-    projectData.link = document.getElementById('projExternalUrl').value;
-  } else if (type === 'web') {
-    const externalUrl = document.getElementById('projExternalUrl').value;
-    if (externalUrl) {
-      // Web project with external URL
-      projectData.externalUrl = externalUrl;
-      projectData.html = `<iframe src="${externalUrl}" style="width:100%;height:100%;border:none;"></iframe>`;
-      projectData.css = '';
-      projectData.js = '';
-    } else {
-      projectData.html = document.getElementById('projHtml').value;
-      projectData.css = document.getElementById('projCss').value;
-      projectData.js = document.getElementById('projJs').value;
-    }
+  if (type === 'external' || externalUrlVal) {
+    projectData.externalUrl = externalUrlVal;
+    projectData.html = `<iframe src="${externalUrlVal}" style="width:100%;height:100%;border:none;" allow="fullscreen"></iframe>`;
+    projectData.css = '';
+    projectData.js = '';
+  } else {
+    projectData.html = document.getElementById('projHtml').value;
+    projectData.css = document.getElementById('projCss').value;
+    projectData.js = document.getElementById('projJs').value;
   }
   
   if (id) {
