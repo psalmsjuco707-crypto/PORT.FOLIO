@@ -33,9 +33,6 @@ body {
   position: relative;
 }
 
-/* =========================================
-   CUSTOM CURSOR - GOLDEN ORNATE SWORD (SMALLER & FIXED TIP)
-   ========================================= */
 @media (hover: hover) and (pointer: fine) {
   html, body, a, button, .project-card, .feedback-card, input, textarea, select, .btn, .tab-btn, .social-icon, .add-btn, .reaction-btn, .viewer-action-btn, .inline-comment-submit, .close-modal, .file-label {
     cursor: none !important;
@@ -46,21 +43,16 @@ body {
   position: fixed;
   left: calc(var(--cursor-x) * 1px);
   top: calc(var(--cursor-y) * 1px);
-  
   width: 56px;
   height: 56px;
-  
   transform: translate(0, 0);
   transform-origin: 0 0;
-  
   pointer-events: none !important;
   z-index: 99999;
   will-change: transform, left, top;
   transition: none;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
-  
-  /* Golden highlight glow directly on the sword */
   filter: drop-shadow(0 0 2px rgba(240, 208, 96, 0.8)) 
           drop-shadow(0 0 4px rgba(212, 175, 55, 0.6))
           drop-shadow(0 0 8px rgba(255, 200, 100, 0.4));
@@ -78,12 +70,8 @@ body {
   filter: brightness(1.15) contrast(1.1) saturate(1.3);
 }
 
-/* REMOVED: Circular glow envelope */
-.sword-glow {
-  display: none;
-}
+.sword-glow { display: none; }
 
-/* Subtle sparkles on the sword blade */
 .sword-sparkle {
   position: absolute;
   inset: -8px;
@@ -113,7 +101,6 @@ body {
 
 .custom-cursor.hovering {
   transform: translate(0, 0) scale(1.15);
-  /* Enhanced golden highlight on hover */
   filter: drop-shadow(0 0 3px rgba(240, 208, 96, 1)) 
           drop-shadow(0 0 6px rgba(212, 175, 55, 0.9))
           drop-shadow(0 0 12px rgba(255, 200, 100, 0.7))
@@ -620,7 +607,7 @@ section { padding: 6rem 3rem; position: relative; z-index: 2; }
   text-transform: uppercase; letter-spacing: 1px;
   margin-bottom: 0.75rem;
 }
-.project-type-badge.cpp {
+.project-type-badge.external {
   background: rgba(192,192,192,0.1);
   color: var(--silver-light);
   border-color: rgba(192,192,192,0.2);
@@ -747,11 +734,6 @@ section { padding: 6rem 3rem; position: relative; z-index: 2; }
 }
 .viewer-preview-content iframe {
   width: 100%; height: 100%; border: none; min-height: 400px;
-}
-.viewer-preview-content .cpp-output {
-  padding: 1.2rem; background: #000; color: #4ade80;
-  font-family: 'Courier New', monospace; font-size: 0.9rem;
-  min-height: 100%; white-space: pre-wrap; line-height: 1.7;
 }
 
 .feedbacks { background: var(--bg); }
@@ -1068,7 +1050,6 @@ section { padding: 6rem 3rem; position: relative; z-index: 2; }
   text-align: center; margin-top: 1rem; font-size: 0.9rem; display: none;
 }
 
-/* ===== GOLDEN SOCIAL ICONS ===== */
 .socials { display: flex; justify-content: center; gap: 1rem; margin-top: 2rem; flex-wrap: wrap; position: relative; z-index: 1; }
 .socials a {
   width: 54px; height: 54px; border-radius: 50%;
