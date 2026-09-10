@@ -4,13 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shizuka's Portfolio | Psalms C. Juco</title>
-   <!-- ADD THESE 4 LINES RIGHT HERE FOR THE LINK PREVIEW -->
+  <!-- ADD THESE 4 LINES RIGHT HERE FOR THE LINK PREVIEW -->
   <meta property="og:title" content="Shizuka's Portfolio | Psalms C. Juco">
   <meta property="og:description" content="Creative developer & digital designer crafting bold, modern experiences on the web.">
   <meta property="og:image" content="https://psalmsjuco707-crypto.github.io/PORT.FOLIO/profile.jpg">
   <meta property="og:url" content="https://psalmsjuco707-crypto.github.io/PORT.FOLIO/">
   
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.0/ind
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.0/index.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5.0.0/index.css">
   <link rel="stylesheet" href="portfolio.css">
@@ -116,7 +115,7 @@
       <div class="ring ring-2"><div class="ring-dot"></div></div>
       <div class="ring ring-3"><div class="ring-dot"></div></div>
       <div class="img-wrap">
-        <img src="profile.jpg" alt="Psalms C. Juco" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 400%22><rect fill=%22%23141414%22 width=%22400%22 height=%22400%22/><text x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 fill=%22%23d4af37%22 font-size=%2260%22>👤</text></svg>'">
+        <img src="Shizuka.jpg" alt="Psalms C. Juco" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 400%22><rect fill=%22%23141414%22 width=%22400%22 height=%22400%22/><text x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 fill=%22%23d4af37%22 font-size=%2260%22>👤</text></svg>'">
       </div>
       <div class="status-badge"><span class="dot"></span> Available for work</div>
     </div>
@@ -262,13 +261,8 @@
       <label>Project Type</label>
       <select id="projType" onchange="toggleCodeFields()">
         <option value="web">🌐 Web Project (HTML/CSS/JS)</option>
-        <option value="cpp">⚙️ C++ Project (Interactive)</option>
+        <option value="external">🔗 External Link (URL)</option>
       </select>
-      <label>External URL (Optional)</label>
-<input type="url" id="projExternalUrl" placeholder="https://psalmsjuco707-crypto.github.io/Gym-Membership-Management-System/">
-<small style="color: var(--muted); font-size: 0.8rem; display: block; margin-top: 0.3rem;">
-  💡 For multi-page systems, host them separately and paste the link here
-</small>
       <label>Project Image</label>
       <div class="image-upload-container">
         <img id="projImagePreview" src="" alt="Preview" class="image-preview">
@@ -276,9 +270,9 @@
         <label for="projImageFile" class="file-label">📷 Click to Upload Image</label>
         <input type="hidden" id="projImageBase64">
       </div>
-      <div id="codeFieldsCpp" class="code-fields">
-        <label>C++ Code</label>
-        <textarea id="projCode" rows="6" class="code-input"></textarea>
+      <div id="codeFieldsExternal" class="code-fields" style="display:none;">
+        <label>External URL</label>
+        <input type="url" id="projExternalUrl" placeholder="https://example.com" style="width: 100%; padding: 0.8rem; background: var(--bg); border: 1px solid var(--glass-border); color: var(--text); border-radius: 8px; font-family: inherit; font-size: 0.95rem; outline: none;">
       </div>
       <div id="codeFieldsWeb" class="code-fields">
         <label>HTML</label>
@@ -290,6 +284,18 @@
       </div>
       <button type="submit" class="btn btn-primary btn-full">Save Project</button>
     </form>
+  </div>
+</div>
+
+<!-- ===== ADMIN PASSWORD MODAL ===== -->
+<div id="adminPasswordModal" class="modal">
+  <div class="modal-content" style="max-width: 400px; text-align: center;">
+    <span class="close-modal" onclick="closeModal('adminPasswordModal')">&times;</span>
+    <h3>🔒 Admin Access</h3>
+    <p style="color: var(--muted); margin-bottom: 1.5rem; font-size: 0.95rem;">Enter the admin password to continue.</p>
+    <input type="password" id="adminPasswordInput" placeholder="••••••••" style="width: 100%; padding: 0.9rem; background: var(--bg); border: 1px solid var(--glass-border); color: var(--text); border-radius: 10px; font-family: inherit; font-size: 1.1rem; outline: none; margin-bottom: 1rem; text-align: center; letter-spacing: 4px; transition: border-color 0.3s, box-shadow 0.3s;" onfocus="this.style.borderColor='#ff8c28'; this.style.boxShadow='0 0 0 3px rgba(255,140,40,0.1)'" onblur="this.style.borderColor='var(--glass-border)'; this.style.boxShadow='none'">
+    <p id="adminPasswordError" style="color: #ef4444; font-size: 0.85rem; display: none; margin-bottom: 1rem;">Incorrect password. Try again.</p>
+    <button class="btn btn-primary btn-full" onclick="checkAdminPassword()">Unlock</button>
   </div>
 </div>
 
@@ -306,7 +312,7 @@
       <div class="viewer-actions">
         <button class="viewer-action-btn" id="viewerNewTabBtn" onclick="openInNewTab()" style="display:none;">↗ Open in New Tab</button>
         <button class="viewer-action-btn" id="viewerFullscreenBtn" onclick="toggleViewerFullscreen()">⛶ Fullscreen</button>
-        <button class="viewer-action-btn primary" id="viewerRunBtn" onclick="runViewerCode()">▶ Run</button>
+        <button class="viewer-action-btn primary" id="viewerRunBtn" onclick="runViewerCode()">▶ Refresh</button>
         <button class="viewer-close" onclick="closeViewer()">✕</button>
       </div>
     </div>
@@ -332,7 +338,6 @@
 <button onclick="toggleAdminMode()" class="floating-admin-btn" title="Toggle Admin Mode">⚙️</button>
 <button onclick="window.scrollTo({top:0, behavior:'smooth'})" class="back-to-top" id="backToTop" title="Back to top">↑</button>
 
-<script src="https://cdn.jsdelivr.net/npm/JSCPP@2.0.6/dist/JSCPP.min.js"></script>
 <script src="portfolio.js"></script>
 </body>
 </html>
