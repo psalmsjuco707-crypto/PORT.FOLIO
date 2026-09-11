@@ -45,7 +45,8 @@ body {
   top: calc(var(--cursor-y) * 1px);
   width: 56px;
   height: 56px;
-  transform: translate(0, 0);
+  /* CRITICAL FIX: Shifts the sword so the tip aligns with the actual OS click point */
+  transform: translate(-15%, -15%) !important; 
   transform-origin: 0 0;
   pointer-events: none !important;
   z-index: 99999;
@@ -62,14 +63,13 @@ body {
   width: 100%;
   height: 100%;
   display: block;
-  pointer-events: none;
+  pointer-events: none !important; /* Prevents the image from blocking clicks */
   user-select: none;
   -webkit-user-drag: none;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
   filter: brightness(1.15) contrast(1.1) saturate(1.3);
 }
-
 .sword-glow { display: none; }
 
 .sword-sparkle {
