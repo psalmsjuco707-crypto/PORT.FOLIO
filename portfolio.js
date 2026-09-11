@@ -1,93 +1,128 @@
-// ===== DEFAULT DATA =====
+// ===== FIREBASE SETUP =====
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { 
+  getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, 
+  onSnapshot, increment, arrayUnion, arrayRemove 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDxf-ao-SmrZnKIhgopkO_F6CCIagiQTYs",
+  authDomain: "shizukaportfolio.firebaseapp.com",
+  projectId: "shizukaportfolio",
+  storageBucket: "shizukaportfolio.firebasestorage.app",
+  messagingSenderId: "143468476677",
+  appId: "1:143468476677:web:91ee846efe048153189f6c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ===== LOCAL USER ID (For editing own comments) =====
+let localUserId = localStorage.getItem('portfolio_user_id');
+if (!localUserId) {
+  localUserId = 'user_' + Math.random().toString(36).substr(2, 9);
+  localStorage.setItem('portfolio_user_id', localUserId);
+}
+
+let isAdmin = false;
+let currentViewerProject = null;
+
+// ===== DEFAULT DATA (Only used to seed the database on first run) =====
 const defaultProjects = [
   {
-    id: 1,
+    id: "1",
     title: "C++ Interactive Demos",
     desc: "Explore 10 interactive C++ demos compiled and running directly in your browser.",
     type: "web",
-    isExternal: false,
     externalUrl: "https://psalmsjuco707-crypto.github.io/C-Interactive-Platform/",
     image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 200'><rect fill='%230a0a0a' width='400' height='200'/><text x='50%25' y='50%25' text-anchor='middle' fill='%23d4af37' font-size='20' font-family='monospace'>C++ Interactive Platform</text></svg>"
   },
   {
-    id: 2,
+    id: "2",
     title: "Gym Membership Management System",
     desc: "A complete web-based gym management system with member tracking, membership plans, and attendance monitoring.",
     type: "web",
-    isExternal: false,
     externalUrl: "https://psalmsjuco707-crypto.github.io/Gym-Membership-Management-System/",
     image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 200'><rect fill='%231a1a1a' width='400' height='200'/><text x='50%25' y='50%25' text-anchor='middle' fill='%23d4af37' font-size='20' font-family='sans-serif'>Gym Management 💪</text></svg>"
-  },
-  {
-    id: 3,
-    title: "Interactive Web Card",
-    desc: "A live HTML/CSS/JS component you can edit and preview instantly.",
-    type: "web",
-    image: "",
-    html: '<div class="card"><h2>Hello!</h2><p>Click me</p></div>',
-    css: '.card { padding: 2rem; background: linear-gradient(135deg, #ff8c28, #d4af37); border-radius: 12px; color: #000; text-align: center; cursor: pointer; transition: transform 0.3s; } .card:hover { transform: scale(1.05); }',
-    js: 'document.querySelector(".card").addEventListener("click", () => alert("Clicked!"));'
   }
 ];
 
 const defaultFeedbacks = [
   { 
-    id: 1, 
+    id: "1", 
     name: "Alex Johnson", 
     role: "Product Manager", 
-    text: "Psalms delivered an outstanding UI/UX design that exceeded our expectations. His attention to detail and creative vision transformed our product completely.",
+    text: "Psalms delivered an outstanding UI/UX design that exceeded our expectations.",
     date: "Aug 15, 2026",
     hearts: 12,
-    heartedByUser: false,
-    comments: [
-      { id: 101, name: "Sarah Lee", text: "Totally agree! His work is phenomenal.", date: "Aug 16, 2026" }
-    ]
-  },
-  {
-    id: 2,
-    name: "Maria Santos",
-    role: "Classmate",
-    text: "Working with Psalms on our group projects was a great experience. He's reliable, creative, and always willing to help.",
-    date: "Jul 22, 2026",
-    hearts: 8,
-    heartedByUser: false,
+    heartedBy: ["user_example"],
     comments: []
   }
 ];
 
-// ===== LOCAL STORAGE =====
-function getData(key, defaults) {
-  try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : defaults;
-  } catch(e) { return defaults; }
+// ===== SEED DATABASE IF EMPTY =====
+async function seedDatabase() {
+  const projSnap = await onSnapshot(collection(db, "projects"), (snap) => {
+    if (snap.empty) {
+      defaultProjects.forEach(p => setDoc(doc(db, "projects", p.id), p));
+    }
+  }, { onlyOnce: true });
+
+  const fbSnap = await onSnapshot(collection(db, "feedbacks"), (snap) => {
+    if (snap.empty) {
+      defaultFeedbacks.forEach(f => setDoc(doc(db, "feedbacks", f.id), f));
+    }
+  }, { onlyOnce: true });
 }
-function saveData(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
 
-let projects = getData('portfolio_projects', defaultProjects);
-let feedbacks = getData('portfolio_feedbacks', defaultFeedbacks);
-let isAdmin = false;
-let currentViewerProject = null;
-let currentViewerTab = null;
+// ===== REAL-TIME DATA LISTENERS =====
+let projects = [];
+let feedbacks = [];
 
-// ===== 3D TILT EFFECT =====
-function init3DTilt() {
-  const cards = document.querySelectorAll('.project-card, .feedback-card, .whatido-card');
-  cards.forEach(card => {
-    card.addEventListener('mousemove', (e) => {
-      const rect = card.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
-      const rotateX = ((y - centerY) / centerY) * -4;
-      const rotateY = ((x - centerX) / centerX) * 4;
-      card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
-    });
-    card.addEventListener('mouseleave', () => {
-      card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
-    });
+function initDataListeners() {
+  onSnapshot(collection(db, "projects"), (snapshot) => {
+    projects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderProjects();
   });
+
+  onSnapshot(collection(db, "feedbacks"), (snapshot) => {
+    feedbacks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderFeedbacks();
+  });
+}
+
+// ===== MOBILE OPTIMIZATION CHECK =====
+const isDesktop = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+if (isDesktop) {
+  // Initialize 3D tilt only on desktop
+  init3DTilt();
+  
+  // Custom cursor logic (Desktop Only)
+  const cursorGlow = document.getElementById('cursorGlow');
+  const customCursor = document.getElementById('customCursor');
+  
+  document.addEventListener('mousemove', (e) => {
+    document.documentElement.style.setProperty('--cursor-x', Math.round(e.clientX));
+    document.documentElement.style.setProperty('--cursor-y', Math.round(e.clientY));
+    if (cursorGlow) {
+      cursorGlow.style.left = e.clientX + 'px';
+      cursorGlow.style.top = e.clientY + 'px';
+    }
+  }, { passive: true });
+
+  const clickables = document.querySelectorAll('a, button, .project-card, .feedback-card, input, textarea, select, .btn, .tab-btn, .social-icon, .add-btn, .reaction-btn, .viewer-action-btn, .inline-comment-submit, .close-modal, .file-label, .whatido-card');
+  clickables.forEach(el => {
+    el.addEventListener('mouseenter', () => customCursor?.classList.add('hovering'));
+    el.addEventListener('mouseleave', () => customCursor?.classList.remove('hovering'));
+  });
+} else {
+  // Completely disable cursor elements on mobile to prevent lag
+  const customCursor = document.getElementById('customCursor');
+  if (customCursor) customCursor.style.display = 'none';
+  const cursorGlow = document.getElementById('cursorGlow');
+  if (cursorGlow) cursorGlow.style.display = 'none';
 }
 
 // ===== RENDER PROJECTS =====
@@ -100,24 +135,22 @@ function renderProjects() {
     const card = document.createElement('div');
     card.className = 'project-card reveal visible';
     card.onclick = (e) => {
-      if (e.target.closest('.delete-btn')) return;
-      // Always open the viewer now, the viewer handles external URLs beautifully
+      if (e.target.closest('.delete-btn') || e.target.closest('.edit-btn')) return;
       openViewer(proj.id);
     };
 
     const imgHtml = proj.image 
-      ? `<img src="${proj.image}" alt="${proj.title}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 200%22><rect fill=%22%23141414%22 width=%22400%22 height=%22200%22/><text x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 fill=%22%23888%22 font-size=%2220%22>No Image</text></svg>';">`
-      : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg3);color:var(--muted);font-size:0.9rem;">📷 No Image</div>`;
+      ? `<img src="${proj.image}" alt="${proj.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+         <div style="display:none; width:100%; height:100%; align-items:center; justify-content:center; background:var(--bg3); color:var(--muted); font-size:0.9rem;">📷 Image Error</div>`
+      : `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:var(--bg3); color:var(--muted); font-size:0.9rem;">📷 No Image</div>`;
 
     const badgeText = proj.externalUrl ? '🔗 External' : '🌐 Web';
     const badgeClass = proj.externalUrl ? 'external' : '';
 
     card.innerHTML = `
-      <button class="delete-btn" onclick="event.stopPropagation(); deleteProject(${proj.id})">🗑 Delete</button>
-      <button class="delete-btn" style="right: 80px; background: var(--accent); color: #000;" onclick="event.stopPropagation(); editProject(${proj.id})">✏️ Edit</button>
-      <div class="project-img">
-        ${imgHtml}
-      </div>
+      <button class="delete-btn" style="${isAdmin ? 'display:flex !important' : ''}" onclick="event.stopPropagation(); deleteProject('${proj.id}')">🗑 Delete</button>
+      <button class="delete-btn edit-btn" style="${isAdmin ? 'display:flex !important' : ''}; right: 80px; background: var(--accent); color: #000;" onclick="event.stopPropagation(); openProjectModal('${proj.id}')">✏️ Edit</button>
+      <div class="project-img">${imgHtml}</div>
       <div class="project-info">
         <span class="project-type-badge ${badgeClass}">${badgeText}</span>
         <h3>${proj.title}</h3>
@@ -126,145 +159,145 @@ function renderProjects() {
     `;
     grid.appendChild(card);
   });
-  init3DTilt();
+  if (isDesktop) init3DTilt();
 }
 
-// ===== PROJECT VIEWER =====
-function openViewer(projectId) {
-  const proj = projects.find(p => p.id === projectId);
-  if (!proj) return;
-  currentViewerProject = proj;
-
-  document.getElementById('viewerTitle').textContent = proj.title;
-  document.getElementById('viewerDesc').textContent = proj.desc;
-  document.getElementById('viewerIcon').textContent = proj.externalUrl ? '🔗' : '🌐';
-
-  document.getElementById('viewerFullscreenBtn').style.display = 'inline-flex';
-  document.getElementById('viewerFullscreenBtn').innerHTML = '⛶ Fullscreen';
-  document.getElementById('viewerNewTabBtn').style.display = 'inline-flex';
+// ===== RENDER FEEDBACKS =====
+function renderFeedbacks() {
+  const grid = document.getElementById('feedbacksGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
   
-  if (document.fullscreenElement) document.exitFullscreen();
-
-  const tabs = document.getElementById('viewerTabs');
-  tabs.innerHTML = '';
-
-  if (proj.externalUrl) {
-    // External URL Project: Show single "Live Preview" tab
-    const tab = document.createElement('button');
-    tab.className = 'viewer-tab active';
-    tab.textContent = 'Live Preview';
-    tab.onclick = () => switchViewerTab('preview', tab);
-    tabs.appendChild(tab);
-    currentViewerTab = 'preview';
+  feedbacks.forEach(fb => {
+    const card = document.createElement('div');
+    card.className = 'feedback-card reveal visible';
+    const heartCount = fb.hearts || 0;
+    const commentCount = (fb.comments || []).length;
+    const userHasHearted = fb.heartedBy && fb.heartedBy.includes(localUserId);
     
-    document.getElementById('viewerCodeDisplay').textContent = `// This project is hosted externally\n// URL: ${proj.externalUrl}\n// Click "Open in New Tab" to visit the full site`;
-    document.getElementById('previewLabel').textContent = '🔍 Live Preview';
-    renderExternalPreview(proj);
-  } else if (proj.type === 'web') {
-    // Regular Web Project: Show code tabs
-    const files = [
-      { key: 'html', label: 'index.html' },
-      { key: 'css', label: 'style.css' },
-      { key: 'js', label: 'script.js' }
-    ];
-    files.forEach((file, i) => {
-      const tab = document.createElement('button');
-      tab.className = 'viewer-tab' + (i === 0 ? ' active' : '');
-      tab.textContent = file.label;
-      tab.onclick = () => switchViewerTab(file.key, tab);
-      tabs.appendChild(tab);
-    });
-    currentViewerTab = 'html';
-    document.getElementById('viewerCodeDisplay').textContent = proj.html || '';
-    document.getElementById('previewLabel').textContent = '🔍 Live Preview';
-    renderWebPreview(proj);
-  }
-
-  document.getElementById('projectViewer').classList.add('active');
-  document.body.style.overflow = 'hidden';
+    const commentsList = (fb.comments || []).map(c => {
+      const isOwner = c.userId === localUserId || isAdmin;
+      return `
+        <div class="inline-comment">
+          <div class="inline-comment-avatar">${c.name.charAt(0).toUpperCase()}</div>
+          <div class="inline-comment-body">
+            <div class="inline-comment-head">
+              <strong>${escapeHtml(c.name)}</strong>
+              <span class="inline-comment-date">${c.date || ''}</span>
+              ${isOwner ? `<button class="inline-comment-del" onclick="deleteComment('${fb.id}', '${c.id}')" title="Delete">✕</button>` : ''}
+            </div>
+            <p>${escapeHtml(c.text)}</p>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    card.innerHTML = `
+      <button class="delete-btn" style="${isAdmin ? 'display:flex !important' : ''}" onclick="deleteFeedback('${fb.id}')">🗑 Delete</button>
+      <p class="feedback-text">${escapeHtml(fb.text)}</p>
+      <div class="feedback-author">
+        <div class="author-avatar">${fb.name.charAt(0).toUpperCase()}</div>
+        <div class="author-info">
+          <h4>${escapeHtml(fb.name)}</h4>
+          <span>${escapeHtml(fb.role)}${fb.date ? ' • ' + fb.date : ''}</span>
+        </div>
+      </div>
+      <div class="feedback-reactions">
+        <button class="reaction-btn ${userHasHearted ? 'hearted' : ''}" onclick="toggleHeart('${fb.id}')" aria-label="Like">
+          <svg class="heart-svg" viewBox="0 0 24 24" fill="${userHasHearted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          <span class="reaction-count">${heartCount}</span>
+        </button>
+        <button class="reaction-btn comment-toggle" onclick="toggleCommentSection('${fb.id}')" aria-label="Comments">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span class="reaction-count">${commentCount}</span>
+        </button>
+      </div>
+      <div class="feedback-comments-section" id="comments-${fb.id}">
+        <div class="comments-list">
+          ${commentCount === 0 ? '<p class="no-comments">No comments yet. Be the first!</p>' : commentsList}
+        </div>
+        <form class="inline-comment-form" onsubmit="addCommentToFeedback('${fb.id}', event)">
+          <input type="text" id="cmt-name-${fb.id}" placeholder="Your name" required maxlength="50">
+          <textarea id="cmt-text-${fb.id}" placeholder="Write a comment..." rows="2" required maxlength="500"></textarea>
+          <button type="submit" class="inline-comment-submit">Post</button>
+        </form>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+  if (isDesktop) init3DTilt();
 }
 
-function switchViewerTab(key, tabEl) {
-  document.querySelectorAll('.viewer-tab').forEach(t => t.classList.remove('active'));
-  tabEl.classList.add('active');
-  currentViewerTab = key;
-  const proj = currentViewerProject;
-  if (!proj) return;
+// ===== ACTIONS (Real-time Firebase Updates) =====
+async function toggleHeart(feedbackId) {
+  const fb = feedbacks.find(f => f.id === feedbackId);
+  if (!fb) return;
+  if (!fb.heartedBy) fb.heartedBy = [];
   
-  if (key === 'preview' && proj.externalUrl) {
-    renderExternalPreview(proj);
-  } else {
-    document.getElementById('viewerCodeDisplay').textContent = proj[key] || '';
-  }
-}
-
-function renderWebPreview(proj) {
-  const preview = document.getElementById('viewerPreview');
-  const source = `<!DOCTYPE html><html><head><style>${proj.css || ''}</style></head><body>${proj.html || ''}<script>try { ${proj.js || ''} } catch(e) { console.error(e); }<\/script></body></html>`;
-  preview.innerHTML = `<iframe srcdoc="${source.replace(/"/g, '&quot;')}"></iframe>`;
-}
-
-function renderExternalPreview(proj) {
-  const preview = document.getElementById('viewerPreview');
-  if (proj.externalUrl) {
-    // Added allow="fullscreen" so the embedded site can go fullscreen too!
-    preview.innerHTML = `<iframe src="${proj.externalUrl}" style="width:100%;height:100%;border:none;" allow="fullscreen"></iframe>`;
-  }
-}
-
-function toggleViewerFullscreen() {
-  const panel = document.getElementById('viewerPreviewPanel');
-  if (!document.fullscreenElement) {
-    panel.requestFullscreen().catch(() => {});
-  } else {
-    document.exitFullscreen();
-  }
-}
-document.addEventListener('fullscreenchange', () => {
-  const btn = document.getElementById('viewerFullscreenBtn');
-  if (btn) btn.innerHTML = document.fullscreenElement ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
-});
-
-function openInNewTab() {
-  const proj = currentViewerProject;
-  if (!proj) return;
+  const fbRef = doc(db, "feedbacks", feedbackId);
+  const userIndex = fb.heartedBy.indexOf(localUserId);
   
-  if (proj.externalUrl) {
-    window.open(proj.externalUrl, '_blank');
+  if (userIndex === -1) {
+    await updateDoc(fbRef, { hearts: increment(1), heartedBy: arrayUnion(localUserId) });
   } else {
-    const source = `<!DOCTYPE html><html><head><style>${proj.css || ''}</style></head><body>${proj.html || ''}<script>try { ${proj.js || ''} } catch(e) {}<\/script></body></html>`;
-    window.open(URL.createObjectURL(new Blob([source], { type: 'text/html' })), '_blank');
+    await updateDoc(fbRef, { hearts: increment(-1), heartedBy: arrayRemove(localUserId) });
   }
 }
 
-function closeViewer() {
-  if (document.fullscreenElement) document.exitFullscreen();
-  document.getElementById('projectViewer').classList.remove('active');
-  document.body.style.overflow = '';
-  currentViewerProject = null;
+async function addCommentToFeedback(feedbackId, event) {
+  event.preventDefault();
+  const fb = feedbacks.find(f => f.id === feedbackId);
+  if (!fb) return;
+  
+  const nameInput = document.getElementById(`cmt-name-${feedbackId}`);
+  const textInput = document.getElementById(`cmt-text-${feedbackId}`);
+  if (!fb.comments) fb.comments = [];
+  
+  fb.comments.push({
+    id: 'cmt_' + Date.now(),
+    name: nameInput.value.trim() || 'Anonymous',
+    text: textInput.value.trim(),
+    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    userId: localUserId
+  });
+  
+  await updateDoc(doc(db, "feedbacks", feedbackId), { comments: fb.comments });
+  nameInput.value = '';
+  textInput.value = '';
+  
+  setTimeout(() => {
+    const section = document.getElementById(`comments-${feedbackId}`);
+    if (section) section.classList.add('open');
+  }, 50);
 }
 
-function runViewerCode() {
-  const proj = currentViewerProject;
-  if (!proj) return;
-  const btn = document.getElementById('viewerRunBtn');
-  
-  if (proj.externalUrl) {
-    renderExternalPreview(proj);
-  } else {
-    renderWebPreview(proj);
+async function deleteComment(feedbackId, commentId) {
+  const fb = feedbacks.find(f => f.id === feedbackId);
+  if (!fb || !fb.comments) return;
+  fb.comments = fb.comments.filter(c => c.id !== commentId);
+  await updateDoc(doc(db, "feedbacks", feedbackId), { comments: fb.comments });
+}
+
+async function deleteProject(id) {
+  if (confirm('Delete this project?')) {
+    await deleteDoc(doc(db, "projects", id));
   }
-  
-  btn.innerHTML = '✓ Refreshed';
-  setTimeout(() => { btn.innerHTML = '▶ Refresh'; }, 1500);
 }
 
-// ===== MODAL & FORM HANDLING =====
+async function deleteFeedback(id) {
+  if (confirm('Delete this feedback?')) {
+    await deleteDoc(doc(db, "feedbacks", id));
+  }
+}
+
+// ===== PROJECT MODAL & SAVING =====
 function openProjectModal(projectId = null) {
   const modal = document.getElementById('projectModal');
   const form = document.getElementById('projectForm');
-  if (!modal || !form) return;
-  
   const preview = document.getElementById('projImagePreview');
   const base64Input = document.getElementById('projImageBase64');
   const fileInput = document.getElementById('projImageFile');
@@ -283,7 +316,7 @@ function openProjectModal(projectId = null) {
       preview.src = proj.image;
       base64Input.value = proj.image;
     } else {
-      preview.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><rect fill="%23141414" width="400" height="200"/><text x="50%" y="50%" text-anchor="middle" fill="%23888" font-size="20">Click to Upload</text></svg>';
+      preview.src = proj.image || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><rect fill="%23141414" width="400" height="200"/><text x="50%" y="50%" text-anchor="middle" fill="%23888" font-size="20">Click to Upload</text></svg>';
       base64Input.value = proj.image || '';
     }
     
@@ -308,48 +341,31 @@ function openProjectModal(projectId = null) {
   modal.classList.add('active');
 }
 
-function editProject(id) { openProjectModal(id); }
-function closeModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (modal) modal.classList.remove('active');
-}
 function toggleCodeFields() {
   const type = document.getElementById('projType').value;
   document.getElementById('codeFieldsWeb').style.display = type === 'web' ? 'block' : 'none';
   document.getElementById('codeFieldsExternal').style.display = type === 'external' ? 'block' : 'none';
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const fileInput = document.getElementById('projImageFile');
-  const preview = document.getElementById('projImagePreview');
-  const base64Input = document.getElementById('projImageBase64');
-  if (fileInput) {
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          preview.src = ev.target.result;
-          base64Input.value = ev.target.result;
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-  }
-});
-
-function saveProject(event) {
+async function saveProject(event) {
   event.preventDefault();
-  const id = document.getElementById('projId').value;
+  const id = document.getElementById('projId').value || 'proj_' + Date.now();
   const type = document.getElementById('projType').value;
   const externalUrlVal = document.getElementById('projExternalUrl').value;
+  const imageBase64 = document.getElementById('projImageBase64').value;
+  
+  // ⚠️ FIRESTORE LIMIT WARNING: Documents cannot exceed 1MB. Base64 images can be large.
+  if (imageBase64 && imageBase64.length > 800000) {
+    alert("⚠️ Image is too large! Please use an image under 800KB, or paste an external Image URL (like from GitHub or Imgur) to ensure it saves correctly across all devices.");
+    return;
+  }
   
   const projectData = {
-    id: id ? parseInt(id) : Date.now(),
+    id: id,
     title: document.getElementById('projTitle').value,
     desc: document.getElementById('projDesc').value,
     type: type,
-    image: document.getElementById('projImageBase64').value || '',
+    image: imageBase64 || '',
     isExternal: type === 'external'
   };
   
@@ -364,281 +380,94 @@ function saveProject(event) {
     projectData.js = document.getElementById('projJs').value;
   }
   
-  if (id) {
-    const index = projects.findIndex(p => p.id === parseInt(id));
-    if (index !== -1) projects[index] = projectData;
-  } else {
-    projects.push(projectData);
-  }
-  saveData('portfolio_projects', projects);
-  renderProjects();
+  await setDoc(doc(db, "projects", id), projectData);
   closeModal('projectModal');
 }
 
-function deleteProject(id) {
-  if (confirm('Delete this project?')) {
-    projects = projects.filter(p => p.id !== id);
-    saveData('portfolio_projects', projects);
-    renderProjects();
-  }
-}
-
-function exportProjects() {
-  const dataStr = 'const defaultProjects = ' + JSON.stringify(projects, null, 2) + ';';
-  navigator.clipboard.writeText(dataStr).then(() => {
-    alert('✅ Copied! Replace defaultProjects in portfolio.js with this.');
-  }).catch(() => alert('Failed to copy.'));
-}
-
-// ===== HEART REACTIONS =====
-function toggleHeart(feedbackId) {
-  const fb = feedbacks.find(f => f.id === feedbackId);
-  if (!fb) return;
-  fb.heartedByUser = !fb.heartedByUser;
-  fb.hearts = (fb.hearts || 0) + (fb.heartedByUser ? 1 : -1);
-  if (fb.hearts < 0) fb.hearts = 0;
-  saveData('portfolio_feedbacks', feedbacks);
-  
-  const heartBtn = document.querySelector(`[data-heart-id="${feedbackId}"]`);
-  if (heartBtn) {
-    heartBtn.classList.add('heart-pop');
-    setTimeout(() => heartBtn.classList.remove('heart-pop'), 400);
-    if (fb.heartedByUser) createHeartBurst(heartBtn);
-  }
-  renderFeedbacks();
-}
-
-function createHeartBurst(element) {
-  const rect = element.getBoundingClientRect();
-  const burst = document.createElement('div');
-  burst.className = 'heart-burst';
-  burst.style.left = (rect.left + rect.width/2) + 'px';
-  burst.style.top = (rect.top + rect.height/2) + 'px';
-  document.body.appendChild(burst);
-  setTimeout(() => burst.remove(), 1000);
-}
-
-// ===== FEEDBACK COMMENTS =====
-function toggleCommentSection(feedbackId) {
-  const section = document.getElementById(`comments-${feedbackId}`);
-  if (!section) return;
-  section.classList.toggle('open');
-}
-
-function addCommentToFeedback(feedbackId, event) {
-  event.preventDefault();
-  const fb = feedbacks.find(f => f.id === feedbackId);
-  if (!fb) return;
-  
-  const nameInput = document.getElementById(`cmt-name-${feedbackId}`);
-  const textInput = document.getElementById(`cmt-text-${feedbackId}`);
-  
-  if (!fb.comments) fb.comments = [];
-  fb.comments.push({
-    id: Date.now(),
-    name: nameInput.value.trim() || 'Anonymous',
-    text: textInput.value.trim(),
-    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  });
-  
-  saveData('portfolio_feedbacks', feedbacks);
-  renderFeedbacks();
-  
-  setTimeout(() => {
-    const section = document.getElementById(`comments-${feedbackId}`);
-    if (section) section.classList.add('open');
-  }, 50);
-}
-
-function deleteComment(feedbackId, commentId) {
-  const fb = feedbacks.find(f => f.id === feedbackId);
-  if (!fb || !fb.comments) return;
-  fb.comments = fb.comments.filter(c => c.id !== commentId);
-  saveData('portfolio_feedbacks', feedbacks);
-  renderFeedbacks();
-  setTimeout(() => {
-    const section = document.getElementById(`comments-${feedbackId}`);
-    if (section) section.classList.add('open');
-  }, 50);
-}
-
-// ===== RENDER FEEDBACKS =====
-function renderFeedbacks() {
-  const grid = document.getElementById('feedbacksGrid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  
-  feedbacks.forEach(fb => {
-    const card = document.createElement('div');
-    card.className = 'feedback-card reveal visible';
-    const heartCount = fb.hearts || 0;
-    const commentCount = (fb.comments || []).length;
-    const isHearted = fb.heartedByUser || false;
-    
-    const commentsList = (fb.comments || []).map(c => `
-      <div class="inline-comment">
-        <div class="inline-comment-avatar">${c.name.charAt(0).toUpperCase()}</div>
-        <div class="inline-comment-body">
-          <div class="inline-comment-head">
-            <strong>${escapeHtml(c.name)}</strong>
-            <span class="inline-comment-date">${c.date || ''}</span>
-            ${isAdmin ? `<button class="inline-comment-del" onclick="deleteComment(${fb.id}, ${c.id})" title="Delete">✕</button>` : ''}
-          </div>
-          <p>${escapeHtml(c.text)}</p>
-        </div>
-      </div>
-    `).join('');
-    
-    card.innerHTML = `
-      <button class="delete-btn" onclick="deleteFeedback(${fb.id})">🗑 Delete</button>
-      <p class="feedback-text">${escapeHtml(fb.text)}</p>
-      <div class="feedback-author">
-        <div class="author-avatar">${fb.name.charAt(0).toUpperCase()}</div>
-        <div class="author-info">
-          <h4>${escapeHtml(fb.name)}</h4>
-          <span>${escapeHtml(fb.role)}${fb.date ? ' • ' + fb.date : ''}</span>
-        </div>
-      </div>
-      <div class="feedback-reactions">
-        <button class="reaction-btn ${isHearted ? 'hearted' : ''}" data-heart-id="${fb.id}" onclick="toggleHeart(${fb.id})" aria-label="Like">
-          <svg class="heart-svg" viewBox="0 0 24 24" fill="${isHearted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-          </svg>
-          <span class="reaction-count">${heartCount}</span>
-        </button>
-        <button class="reaction-btn comment-toggle" onclick="toggleCommentSection(${fb.id})" aria-label="Comments">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          <span class="reaction-count">${commentCount}</span>
-        </button>
-      </div>
-      <div class="feedback-comments-section" id="comments-${fb.id}">
-        <div class="comments-list">
-          ${commentCount === 0 ? '<p class="no-comments">No comments yet. Be the first!</p>' : commentsList}
-        </div>
-        <form class="inline-comment-form" onsubmit="addCommentToFeedback(${fb.id}, event)">
-          <input type="text" id="cmt-name-${fb.id}" placeholder="Your name" required maxlength="50">
-          <textarea id="cmt-text-${fb.id}" placeholder="Write a comment..." rows="2" required maxlength="500"></textarea>
-          <button type="submit" class="inline-comment-submit">Post</button>
-        </form>
-      </div>
-    `;
-    grid.appendChild(card);
-  });
-  init3DTilt();
-}
-
+// ===== UTILITIES & VIEWER =====
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
-function addPublicComment(event) {
-  event.preventDefault();
-  feedbacks.unshift({
-    id: Date.now(),
-    name: document.getElementById('commentName').value,
-    role: document.getElementById('commentRole').value || 'Visitor',
-    text: document.getElementById('commentText').value,
-    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    hearts: 0,
-    heartedByUser: false,
-    comments: []
+function toggleCommentSection(feedbackId) {
+  const section = document.getElementById(`comments-${feedbackId}`);
+  if (section) section.classList.toggle('open');
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.classList.remove('active');
+}
+
+function init3DTilt() {
+  const cards = document.querySelectorAll('.project-card, .feedback-card, .whatido-card');
+  cards.forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      card.style.transform = `perspective(1000px) rotateX(${((y - centerY) / centerY) * -4}deg) rotateY(${((x - centerX) / centerX) * 4}deg) scale3d(1.02, 1.02, 1.02)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+    });
   });
-  saveData('portfolio_feedbacks', feedbacks);
-  renderFeedbacks();
-  event.target.reset();
-  alert('✅ Comment posted!');
 }
 
-function deleteFeedback(id) {
-  if (confirm('Delete?')) {
-    feedbacks = feedbacks.filter(f => f.id !== id);
-    saveData('portfolio_feedbacks', feedbacks);
-    renderFeedbacks();
+// ===== OPTIMIZED SCROLL LISTENER (Prevents Android Lag) =====
+let ticking = false;
+window.addEventListener('scroll', () => {
+  if (!ticking) {
+    window.requestAnimationFrame(() => {
+      const pct = (window.pageYOffset / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
+      const sp = document.getElementById('scrollProgress');
+      if (sp) sp.style.width = pct + '%';
+      
+      const bt = document.getElementById('backToTop');
+      if (bt) bt.classList.toggle('visible', window.pageYOffset > 400);
+      
+      ticking = false;
+    });
+    ticking = true;
   }
-}
+}, { passive: true });
 
-function clearAllComments() {
-  if (confirm('Delete ALL comments?')) {
-    feedbacks = [];
-    saveData('portfolio_feedbacks', feedbacks);
-    renderFeedbacks();
-  }
-}
-
-// ===== SECURE ADMIN MODE =====
-function toggleAdminMode() {
-  if (!isAdmin) {
-    document.getElementById('adminPasswordInput').value = '';
-    document.getElementById('adminPasswordError').style.display = 'none';
-    document.getElementById('adminPasswordModal').classList.add('active');
-    setTimeout(() => document.getElementById('adminPasswordInput').focus(), 100);
-  } else {
-    isAdmin = false;
-    document.body.classList.remove('admin-mode');
-    renderProjects(); 
-    renderFeedbacks();
-  }
-}
-
-function checkAdminPassword() {
-  const input = document.getElementById('adminPasswordInput').value;
-  if (input === 'PsalmsJuco_23') {
-    isAdmin = true;
-    document.body.classList.add('admin-mode');
-    renderProjects(); 
-    renderFeedbacks();
-    closeModal('adminPasswordModal');
-  } else {
-    document.getElementById('adminPasswordError').style.display = 'block';
-    document.getElementById('adminPasswordInput').value = '';
-    document.getElementById('adminPasswordInput').focus();
-  }
-}
-
-// ===== SKILLS =====
-const skillsData = {
-  frontend: { title: 'Frontend Development', desc: 'Building responsive, fast, and beautiful user interfaces.', tags: ['HTML5', 'CSS3', 'JavaScript', 'React', 'Tailwind CSS', 'TypeScript'] },
-  backend: { title: 'Backend Development', desc: 'Designing robust APIs and server-side solutions.', tags: ['Node.js', 'Python', 'C++', 'SQL', 'REST APIs', 'MongoDB'] },
-  design: { title: 'UI/UX Design', desc: 'Crafting visual experiences that users love.', tags: ['Figma', 'Adobe Photoshop', 'Prototyping', 'Wireframing', 'Design Systems'] },
-  mobile: { title: 'Mobile Development', desc: 'Cross-platform mobile development.', tags: ['React Native', 'Flutter', 'iOS', 'Android', 'Firebase'] }
-};
-
-function switchSkillTab(category, btn) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  const el = document.getElementById('skillsContent');
-  if (!el) return;
-  const d = skillsData[category];
-  el.innerHTML = `<h3>${d.title}</h3><p>${d.desc}</p><div class="skill-tags">${d.tags.map(t => `<span>${t}</span>`).join('')}</div>`;
-  el.style.animation = 'none';
-  setTimeout(() => { el.style.animation = 'fadeIn 0.5s ease'; }, 10);
-}
-
-// ===== INIT =====
+// ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
-  renderProjects();
-  renderFeedbacks();
+  seedDatabase();
+  initDataListeners();
+  
+  // Skills Tab
   const firstTab = document.querySelector('.tab-btn');
-  if (firstTab) switchSkillTab('frontend', firstTab);
+  if (firstTab) {
+    firstTab.click();
+  }
+  window.switchSkillTab = function(category, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const el = document.getElementById('skillsContent');
+    const d = skillsData[category];
+    el.innerHTML = `<h3>${d.title}</h3><p>${d.desc}</p><div class="skill-tags">${d.tags.map(t => `<span>${t}</span>`).join('')}</div>`;
+    el.style.animation = 'none';
+    setTimeout(() => { el.style.animation = 'fadeIn 0.5s ease'; }, 10);
+  };
 
+  // Reveal on Scroll
   const observer = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
   }, { threshold: 0.1 });
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-  document.querySelectorAll('.nav-links a').forEach(a => {
-    a.addEventListener('click', () => document.getElementById('navLinks').classList.remove('open'));
-  });
-
+  // Mobile Particle Reduction (Performance)
   const pc = document.getElementById('particles');
   if (pc) {
-    for (let i = 0; i < 30; i++) {
+    const particleCount = isDesktop ? 30 : 10; // Fewer particles on mobile
+    for (let i = 0; i < particleCount; i++) {
       const p = document.createElement('div');
-      p.className = 'particle';
-      if (Math.random() > 0.5) p.classList.add('silver');
+      p.className = 'particle' + (Math.random() > 0.5 ? ' silver' : '');
       p.style.left = Math.random() * 100 + '%';
       p.style.animationDuration = (Math.random() * 10 + 10) + 's';
       p.style.animationDelay = (Math.random() * 10) + 's';
@@ -647,48 +476,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  const sp = document.getElementById('scrollProgress');
-  const bt = document.getElementById('backToTop');
-  window.addEventListener('scroll', () => {
-    const pct = (window.pageYOffset / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
-    sp.style.width = pct + '%';
-    bt.classList.toggle('visible', window.pageYOffset > 400);
-  });
+  // Admin Mode
+  window.toggleAdminMode = function() {
+    if (!isAdmin) {
+      document.getElementById('adminPasswordInput').value = '';
+      document.getElementById('adminPasswordError').style.display = 'none';
+      document.getElementById('adminPasswordModal').classList.add('active');
+      setTimeout(() => document.getElementById('adminPasswordInput').focus(), 100);
+    } else {
+      isAdmin = false;
+      document.body.classList.remove('admin-mode');
+    }
+  };
 
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeViewer(); closeModal('projectModal'); closeModal('adminPasswordModal'); }
-  });
+  window.checkAdminPassword = function() {
+    const input = document.getElementById('adminPasswordInput').value;
+    if (input === 'PsalmsJuco_23') {
+      isAdmin = true;
+      document.body.classList.add('admin-mode');
+      closeModal('adminPasswordModal');
+      renderProjects(); 
+      renderFeedbacks();
+    } else {
+      document.getElementById('adminPasswordError').style.display = 'block';
+      document.getElementById('adminPasswordInput').value = '';
+    }
+  };
 
-  const adminInput = document.getElementById('adminPasswordInput');
-  if (adminInput) {
-    adminInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') checkAdminPassword();
+  // File Input Preview
+  const fileInput = document.getElementById('projImageFile');
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          document.getElementById('projImagePreview').src = ev.target.result;
+          document.getElementById('projImageBase64').value = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
     });
   }
 
-  const cursorGlow = document.getElementById('cursorGlow');
-  const customCursor = document.getElementById('customCursor');
-  
-  document.addEventListener('mousemove', (e) => {
-    document.documentElement.style.setProperty('--cursor-x', Math.round(e.clientX));
-    document.documentElement.style.setProperty('--cursor-y', Math.round(e.clientY));
-    
-    if (cursorGlow) {
-      cursorGlow.style.left = e.clientX + 'px';
-      cursorGlow.style.top = e.clientY + 'px';
-    }
-  });
-
-  const clickables = document.querySelectorAll('a, button, .project-card, .feedback-card, input, textarea, select, .btn, .tab-btn, .social-icon, .add-btn, .reaction-btn, .viewer-action-btn, .inline-comment-submit, .close-modal, .file-label, .whatido-card');
-  clickables.forEach(el => {
-    el.addEventListener('mouseenter', () => {
-      if (customCursor) customCursor.classList.add('hovering');
-    });
-    el.addEventListener('mouseleave', () => {
-      if (customCursor) customCursor.classList.remove('hovering');
-    });
-  });
-
+  // Contact Form
   const cf = document.querySelector('.contact-form');
   if (cf) {
     cf.addEventListener('submit', async function(e) {
@@ -708,7 +539,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// Close modals on outside click
 window.onclick = function(e) {
   if (e.target === document.getElementById('projectModal')) closeModal('projectModal');
   if (e.target === document.getElementById('adminPasswordModal')) closeModal('adminPasswordModal');
+};
+
+// Close on Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeModal('projectModal'); 
+    closeModal('adminPasswordModal');
+  }
+});
+
+// ===== SKILLS DATA =====
+const skillsData = {
+  frontend: { title: 'Frontend Development', desc: 'Building responsive, fast, and beautiful user interfaces.', tags: ['HTML5', 'CSS3', 'JavaScript', 'React', 'Tailwind CSS', 'TypeScript'] },
+  backend: { title: 'Backend Development', desc: 'Designing robust APIs and server-side solutions.', tags: ['Node.js', 'Python', 'C++', 'SQL', 'REST APIs', 'MongoDB'] },
+  design: { title: 'UI/UX Design', desc: 'Crafting visual experiences that users love.', tags: ['Figma', 'Adobe Photoshop', 'Prototyping', 'Wireframing', 'Design Systems'] },
+  mobile: { title: 'Mobile Development', desc: 'Cross-platform mobile development.', tags: ['React Native', 'Flutter', 'iOS', 'Android', 'Firebase'] }
 };
