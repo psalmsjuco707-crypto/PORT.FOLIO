@@ -574,12 +574,12 @@ window.addCommentToFeedback = addCommentToFeedback;
 window.deleteComment = deleteComment;
 
 // ===== MISSING VIEWER & ADMIN FUNCTIONS =====
-let currentViewerProject = null;
+// Note: currentViewerProject is already declared at the top of the file, so we don't use 'let' here.
 
 window.openViewer = function(projectId) {
   const proj = projects.find(p => p.id === projectId);
   if (!proj) return;
-  currentViewerProject = proj;
+  currentViewerProject = proj; // Reassigns the existing variable
   
   document.getElementById('viewerTitle').textContent = proj.title;
   document.getElementById('viewerDesc').textContent = proj.desc;
