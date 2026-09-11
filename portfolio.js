@@ -560,3 +560,105 @@ const skillsData = {
   design: { title: 'UI/UX Design', desc: 'Crafting visual experiences that users love.', tags: ['Figma', 'Adobe Photoshop', 'Prototyping', 'Wireframing', 'Design Systems'] },
   mobile: { title: 'Mobile Development', desc: 'Cross-platform mobile development.', tags: ['React Native', 'Flutter', 'iOS', 'Android', 'Firebase'] }
 };
+
+// ===== EXPOSE FUNCTIONS TO WINDOW FOR INLINE ONCLICK HANDLERS =====
+window.closeModal = closeModal;
+window.openProjectModal = openProjectModal;
+window.toggleCodeFields = toggleCodeFields;
+window.saveProject = saveProject;
+window.deleteProject = deleteProject;
+window.deleteFeedback = deleteFeedback;
+window.toggleHeart = toggleHeart;
+window.toggleCommentSection = toggleCommentSection;
+window.addCommentToFeedback = addCommentToFeedback;
+window.deleteComment = deleteComment;
+
+// ===== MISSING VIEWER & ADMIN FUNCTIONS =====
+let currentViewerProject = null;
+
+window.openViewer = function(projectId) {
+  const proj = projects.find(p => p.id === projectId);
+  if (!proj) return;
+  currentViewerProject = proj;
+  
+  document.getElementById('viewerTitle').textContent = proj.title;
+  document.getElementById('viewerDesc').textContent = proj.desc;
+  document.getElementById('viewerIcon').textContent = proj.externalUrl ? '🔗' : '🌐';
+  
+  const viewer = document.getElementById('projectViewer');
+  viewer.classList.add('active');
+  
+  const preview = document.getElementById('viewerPreview');
+  if (proj.externalUrl) {
+    preview.innerHTML = `<iframe src="${proj.externalUrl}" style="width:100%;height:100%;border:none;" allow="fullscreen"></iframe>`;
+    document.getElementById('viewerNewTabBtn').style.display = 'inline-flex';
+    document.getElementById('viewerRunBtn').style.display = 'none';
+    document.getElementById('viewerCodeDisplay').textContent = `// External Project\n// URL: ${proj.externalUrl}`;
+  } else {
+    document.getElementById('viewerNewTabBtn').style.display = 'none';
+    document.getElementById('viewerRunBtn').style.display = 'inline-flex';
+    document.getElementById('viewerCodeDisplay').textContent = `<!-- HTML -->\n${proj.html || ''}\n\n/* CSS */\n${proj.css || ''}\n\n// JavaScript\n${proj.js || ''}`;
+    window.runViewerCode();
+  }
+};
+
+window.closeViewer = function() {
+  document.getElementById('projectViewer').classList.remove('active');
+  document.getElementById('viewerPreview').innerHTML = '';
+  currentViewerProject = null;
+};
+
+window.runViewerCode = function() {
+  if (!currentViewerProject || currentViewerProject.externalUrl) return;
+  const preview = document.getElementById('viewerPreview');
+  const html = currentViewerProject.html || '';
+  const css = currentViewerProject.css ? `<style>${currentViewerProject.css}</style>` : '';
+  const js = currentViewerProject.js ? `<script>${currentViewerProject.js}<\/script>` : '';
+  preview.innerHTML = `<iframe srcdoc="${css}${html}${js}" style="width:100%;height:100%;border:none;" sandbox="allow-scripts allow-modals allow-forms allow-same-origin"></iframe>`;
+};
+
+window.toggleViewerFullscreen = function() {
+  const container = document.querySelector('.viewer-container');
+  if (!document.fullscreenElement) {
+    container.requestFullscreen().catch(err => console.log(`Error: ${err.message}`));
+  } else {
+    document.exitFullscreen();
+  }
+};
+
+window.openInNewTab = function() {
+  if (currentViewerProject && currentViewerProject.externalUrl) {
+    window.open(currentViewerProject.externalUrl, '_blank');
+  }
+};
+
+window.addPublicComment = function(event) {
+  event.preventDefault();
+  alert("💡 This is a local demo form. To enable real public comments, please integrate Giscus or Disqus as mentioned in the UI.");
+  event.target.reset();
+};
+
+window.clearAllComments = function() {
+  if (!isAdmin) {
+    alert("Admin mode required.");
+    return;
+  }
+  if (confirm("Are you sure you want to clear ALL comments from all feedbacks? This cannot be undone.")) {
+    feedbacks.forEach(fb => {
+      if (fb.comments && fb.comments.length > 0) {
+        updateDoc(doc(db, "feedbacks", fb.id), { comments: [] });
+      }
+    });
+    alert("All comments cleared.");
+  }
+};
+
+window.exportProjects = function() {
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projects, null, 2));
+  const downloadAnchorNode = document.createElement('a');
+  downloadAnchorNode.setAttribute("href", dataStr);
+  downloadAnchorNode.setAttribute("download", "projects_export.json");
+  document.body.appendChild(downloadAnchorNode);
+  downloadAnchorNode.click();
+  downloadAnchorNode.remove();
+};
